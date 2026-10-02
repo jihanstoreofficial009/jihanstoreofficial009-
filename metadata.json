@@ -1,0 +1,6 @@
+{
+  "name": "Jihan Store - বিশ্বাসের সাথে অনলাইন শপিং",
+  "description": "Jihan Store: Premium e-commerce store with cash on delivery, wallet management, product catalog, customer portal, and secure admin panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
