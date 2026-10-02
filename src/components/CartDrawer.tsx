@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { AdBanner } from './AdBanner';
 import { 
   X, 
   Trash2, 
@@ -282,6 +283,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <span>চেকআউট ও অর্ডার কনফার্ম করুন</span>
               <ArrowRight className="w-4 h-4" />
             </button>
+
+            {/* Ad Placement: Cart Drawer Banner */}
+            <AdBanner placement="cart_drawer" compact={true} className="mt-2" />
           </div>
         )}
       </div>

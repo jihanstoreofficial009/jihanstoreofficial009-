@@ -1,12 +1,116 @@
-import { Product, Category, StoreSettings, Coupon, Review } from '../types/store';
+import { 
+  Product, 
+  Category, 
+  StoreSettings, 
+  Coupon, 
+  Review, 
+  LogoConfig, 
+  AddressItem, 
+  ContactNumber, 
+  EmailContact, 
+  SocialLinkItem, 
+  Advertisement 
+} from '../types/store';
+
+export const INITIAL_LOGOS: LogoConfig[] = [
+  {
+    id: 'logo-crest',
+    name: 'Royal Crown Crest (Classic)',
+    nameBn: 'রয়্যাল ক্রাউন ক্রেস্ট (ক্লাসিক)',
+    type: 'crest',
+    tagline: 'Online Shopping with Trust',
+    taglineBn: 'বিশ্বাসের সাথে অনলাইন শপিং',
+    isActive: true
+  },
+  {
+    id: 'logo-minimal',
+    name: 'Modern Minimalist Gold',
+    nameBn: 'মডার্ন মিনিমালিস্ট গোল্ড',
+    type: 'minimal',
+    tagline: 'Premium Lifestyle Store',
+    taglineBn: 'প্রিমিয়াম লাইফস্টাইল স্টোর',
+    isActive: false
+  },
+  {
+    id: 'logo-monogram',
+    name: 'Luxury Monogram Emblem',
+    nameBn: 'লাক্সারি মনোগ্রাম এম্বলম',
+    type: 'monogram',
+    tagline: 'Elegance & Authenticity',
+    taglineBn: 'অভিজাত্য ও আস্থার প্রতীক',
+    isActive: false
+  }
+];
+
+export const INITIAL_ADDRESSES: AddressItem[] = [
+  {
+    id: 'addr-banani',
+    title: 'বনানী ফ্ল্যাগশিপ অফিস (Banani Hub)',
+    address: 'House #42, Road #11, Block-E, Banani',
+    city: 'Dhaka-1213',
+    phone: '+880 1800-123456',
+    isDefault: true,
+    isEnabled: true
+  },
+  {
+    id: 'addr-uttara',
+    title: 'উত্তরা কাস্টমার সাপোর্ট পয়েন্ট',
+    address: 'Sector #3, Road #7, Uttara Model Town',
+    city: 'Dhaka-1230',
+    phone: '+880 1700-654321',
+    isDefault: false,
+    isEnabled: true
+  },
+  {
+    id: 'addr-ctg',
+    title: 'চট্টগ্রাম ডেলিভারি ডিপো',
+    address: 'Agrabad Commercial Area',
+    city: 'Chittagong-4100',
+    phone: '+880 1900-987654',
+    isDefault: false,
+    isEnabled: true
+  }
+];
+
+export const INITIAL_PHONES: ContactNumber[] = [
+  { id: 'ph-1', title: 'হটলাইন (24/7 Hotline)', number: '+880 1800-123456', type: 'phone', isDefault: true, isEnabled: true },
+  { id: 'ph-2', title: 'অর্ডার সাপোর্ট ও ট্র্যাকিং', number: '+880 1700-654321', type: 'support', isDefault: false, isEnabled: true }
+];
+
+export const INITIAL_WHATSAPPS: ContactNumber[] = [
+  { id: 'wa-1', title: 'অফিসিয়াল হোয়াটসঅ্যাপ চ্যাট', number: '+8801800123456', type: 'whatsapp', isDefault: true, isEnabled: true },
+  { id: 'wa-2', title: 'কাস্টমার কেয়ার হোয়াটসঅ্যাপ', number: '+8801700654321', type: 'whatsapp', isDefault: false, isEnabled: true }
+];
+
+export const INITIAL_EMAILS: EmailContact[] = [
+  { id: 'em-1', title: 'প্রধান ইমেইল', email: 'jihanstoreofficial009@gmail.com', isDefault: true, isEnabled: true },
+  { id: 'em-2', title: 'কাস্টমার কেয়ার', email: 'support@jihanstore.com', isDefault: false, isEnabled: true }
+];
+
+export const INITIAL_SOCIAL_LINKS: SocialLinkItem[] = [
+  { id: 'soc-fb', platform: 'facebook', title: 'Facebook Page', url: 'https://facebook.com/jihanstore', isEnabled: true, displayOrder: 1 },
+  { id: 'soc-yt', platform: 'youtube', title: 'YouTube Channel', url: 'https://youtube.com/@jihanstore', isEnabled: true, displayOrder: 2 },
+  { id: 'soc-ig', platform: 'instagram', title: 'Instagram', url: 'https://instagram.com/jihanstore', isEnabled: true, displayOrder: 3 },
+  { id: 'soc-tt', platform: 'tiktok', title: 'TikTok', url: 'https://tiktok.com/@jihanstore', isEnabled: true, displayOrder: 4 },
+  { id: 'soc-wa', platform: 'whatsapp', title: 'WhatsApp Community', url: 'https://wa.me/8801800123456', isEnabled: true, displayOrder: 5 }
+];
 
 export const INITIAL_SETTINGS: StoreSettings = {
   storeName: 'Jihan Store',
+  storeNameBn: 'জিহান স্টোর',
   storeSlogan: 'বিশ্বাসের সাথে অনলাইন শপিং',
+  storeSloganBn: 'বিশ্বাসের সাথে অনলাইন শপিং',
+  activeLogoId: 'logo-crest',
+  logos: INITIAL_LOGOS,
+  addresses: INITIAL_ADDRESSES,
+  phones: INITIAL_PHONES,
+  whatsapps: INITIAL_WHATSAPPS,
+  emails: INITIAL_EMAILS,
+  socialLinks: INITIAL_SOCIAL_LINKS,
   phone: '+880 1800-123456',
   whatsapp: '+8801800123456',
   email: 'jihanstoreofficial009@gmail.com',
-  address: 'House #42, Road #11, Banani, Dhaka-1213, Bangladesh',
+  address: 'House #42, Road #11, Block-E, Banani, Dhaka-1213, Bangladesh',
   insideDhakaDelivery: 60,
   outsideDhakaDelivery: 120,
   freeDeliveryThreshold: 1500,
@@ -14,8 +118,96 @@ export const INITIAL_SETTINGS: StoreSettings = {
   bkashNumber: '01800123456 (Personal / Send Money)',
   nagadNumber: '01800123456 (Personal / Send Money)',
   facebookUrl: 'https://facebook.com/jihanstore',
-  youtubeUrl: 'https://youtube.com/@jihanstore'
+  youtubeUrl: 'https://youtube.com/@jihanstore',
+  telegramBotToken: '8627436875:AAGxH3Q4LQFkG1WrSTOKiF3Z9zyP4Fkd60k',
+  telegramChatId: '6607631932',
+  googleManagementId: 'G-MCXPLT5B3D'
 };
+
+export const INITIAL_ADS: Advertisement[] = [
+  {
+    id: 'ad-top-samsung',
+    title: 'Samsung Galaxy Special Promotion',
+    titleBn: 'স্যামসাং গ্যালাক্সি ধামাকা অফার - ২৫% পর্যন্ত ছাড়!',
+    description: 'অফিশিয়াল ওয়ারেন্টি সহ স্যামসাং স্মার্টফোন ও স্মার্ট এক্সেসরিজে উপভোগ করুন বিশেষ ক্যাশব্যাক।',
+    advertiserName: 'Samsung Bangladesh Ltd',
+    image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=1200&auto=format&fit=crop&q=80',
+    destinationUrl: 'https://www.samsung.com/bd/',
+    buttonText: 'অফার দেখুন',
+    placement: 'home_top',
+    displayOrder: 1,
+    isActive: true,
+    startDate: '2026-09-01',
+    endDate: '2026-12-31',
+    clicks: 142,
+    views: 1820,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'ad-middle-apex',
+    title: 'Apex Premium Leather Collection',
+    titleBn: 'অ্যাপেক্স প্রিমিয়াম জেনুইন লেদার কালেকশন - ফ্ল্যাট ৳৫০০ ক্যাশব্যাক',
+    description: 'হাতে তৈরি খাঁটি চামড়ার জুতো ও ওয়ালেট। জেনুইন কোয়ালিটি ও ১ বছরের ওয়ারেন্টি।',
+    advertiserName: 'Apex Footwear Limited',
+    image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1200&auto=format&fit=crop&q=80',
+    destinationUrl: 'https://www.apexfootwearltd.com/',
+    buttonText: 'ভিজিট করুন',
+    placement: 'home_middle',
+    displayOrder: 1,
+    isActive: true,
+    clicks: 89,
+    views: 1250,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'ad-cart-bkash',
+    title: 'bKash Instant 10% Cashback',
+    titleBn: 'বিকাশ পেমেন্টে ১০% ইনস্ট্যান্ট ক্যাশব্যাক!',
+    description: 'জিহান স্টোরে সর্বনিম্ন ১,০০০ টাকা অর্ডারে বিকাশ পেমেন্ট করলেই ক্যাশব্যাক পান।',
+    advertiserName: 'bKash Limited',
+    image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800&auto=format&fit=crop&q=80',
+    destinationUrl: 'https://www.bkash.com/',
+    buttonText: 'ক্যাশব্যাক নিন',
+    placement: 'cart_drawer',
+    displayOrder: 1,
+    isActive: true,
+    clicks: 65,
+    views: 940,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'ad-bottom-mega',
+    title: 'Jihan Mega Festival Discounts',
+    titleBn: 'জিহান মেগা ফেস্টিভ্যাল ডিসকাউন্ট - কুপন কোড: RAMADAN15',
+    description: 'পোশাক, গ্যাজেটস ও কিচেন আইটেমে আকর্ষণীয় ১৫% অতিরিক্ত ছাড় উপভোগ করুন।',
+    advertiserName: 'Jihan Store Official',
+    image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&auto=format&fit=crop&q=80',
+    destinationUrl: '#products-section',
+    buttonText: 'কেনাকাটা করুন',
+    placement: 'home_bottom',
+    displayOrder: 1,
+    isActive: true,
+    clicks: 210,
+    views: 3100,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'ad-product-care',
+    title: '100% Original Brand Guarantee',
+    titleBn: '১০০% আসল পণ্যের গ্যারান্টি ও ৭ দিনের ফ্রি রিটার্ন',
+    description: 'জিহান স্টোরের প্রতিটি পণ্যে পাচ্ছেন অফিসিয়াল কোয়ালিটি নিশ্চয়তা ও ঝামেলাহীন এক্সচেঞ্জ।',
+    advertiserName: 'Jihan Care Guarantee',
+    image: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=800&auto=format&fit=crop&q=80',
+    destinationUrl: '#',
+    buttonText: 'পলিসি পড়ুন',
+    placement: 'product_page',
+    displayOrder: 1,
+    isActive: true,
+    clicks: 44,
+    views: 780,
+    createdAt: new Date().toISOString()
+  }
+];
 
 export const INITIAL_CATEGORIES: Category[] = [
   { id: 'electronics', name: 'Electronics & Gadgets', nameBn: 'ইলেকট্রনিক্স ও গ্যাজেট', icon: 'Smartphone', itemCount: 12 },

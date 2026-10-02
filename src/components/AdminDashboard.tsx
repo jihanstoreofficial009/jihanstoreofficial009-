@@ -23,9 +23,16 @@ import {
   TrendingUp,
   FileSpreadsheet,
   ShieldCheck,
-  Megaphone
+  Megaphone,
+  Bot,
+  Send,
+  CheckCircle2,
+  Crown
 } from 'lucide-react';
 import { Product, Category, Order, OrderStatus, WalletTransaction, Coupon, StoreSettings } from '../types/store';
+import { AdminLogosManager } from './admin/AdminLogosManager';
+import { AdminAdsManager } from './admin/AdminAdsManager';
+import { AdminContentManager } from './admin/AdminContentManager';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -56,12 +63,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     rejectTransaction,
     updateStoreSettings,
     seedInitialDataToFirestore,
-    addToast
+    addToast,
+    sendTelegramTestNotification
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'orders' | 'customers' | 'wallet' | 'coupons' | 'settings' | 'export'
+    'overview' | 'orders' | 'products' | 'categories' | 'logos' | 'ads' | 'wallet' | 'coupons' | 'settings' | 'export'
   >('overview');
+
+  const [isSendingTelegramTest, setIsSendingTelegramTest] = useState(false);
+  const [telegramTestStatus, setTelegramTestStatus] = useState<string | null>(null);
 
   // Product Modal Form State
   const [showProductModal, setShowProductModal] = useState(false);
@@ -275,6 +286,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('logos')}
+              className={`w-full py-2.5 px-3 rounded-xl flex items-center gap-2.5 transition text-left ${
+                activeTab === 'logos'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-blue-900/40'
+              }`}
+            >
+              <Crown className="w-4 h-4" />
+              <span>লোগো ও ব্র্যান্ডিং (3 Logos)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('ads')}
+              className={`w-full py-2.5 px-3 rounded-xl flex items-center gap-2.5 transition text-left ${
+                activeTab === 'ads'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-blue-900/40'
+              }`}
+            >
+              <Megaphone className="w-4 h-4" />
+              <span>বিজ্ঞাপন সেল (Ad Manager)</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('wallet')}
               className={`w-full py-2.5 px-3 rounded-xl flex items-center justify-between transition text-left ${
                 activeTab === 'wallet'
@@ -314,7 +349,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               }`}
             >
               <Sliders className="w-4 h-4" />
-              <span>স্টোর সেটিংস ও বিজ্ঞাপন</span>
+              <span>কন্টেন্ট ও স্টোর সেটিংস</span>
             </button>
 
             <button
@@ -639,12 +674,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <h4 className="font-bold text-slate-900 dark:text-white">{c.nameBn || c.name}</h4>
                         <span className="text-[10px] text-slate-400 block">{c.name} ({c.id})</span>
                       </div>
-                      <button
-                        onClick={() => deleteCategory(c.id)}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setEditingCategory(c);
+                            setShowCategoryModal(true);
+                          }}
+                          className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded"
+                          title="Edit Category"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteCategory(c.id)}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded"
+                          title="Delete Category"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -745,98 +793,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             )}
 
-            {/* SETTINGS & ADS TAB */}
+            {/* LOGOS & BRANDING TAB (3 LOGOS DYNAMIC MANAGER) */}
+            {activeTab === 'logos' && (
+              <AdminLogosManager />
+            )}
+
+            {/* ADVANCED AD MANAGER TAB */}
+            {activeTab === 'ads' && (
+              <AdminAdsManager />
+            )}
+
+            {/* DYNAMIC STORE SETTINGS & MULTI-CONTENT TAB */}
             {activeTab === 'settings' && (
-              <form onSubmit={handleSettingsSubmit} className="space-y-4 max-w-2xl text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-bold block mb-1">স্টোরের নাম</label>
-                    <input
-                      type="text"
-                      value={settingsForm.storeName}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, storeName: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold block mb-1">স্লোগান</label>
-                    <input
-                      type="text"
-                      value={settingsForm.storeSlogan}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, storeSlogan: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold block mb-1">বিজ্ঞাপন ও অ্যানাউন্সমেন্ট বার মেসেজ</label>
-                  <input
-                    type="text"
-                    value={settingsForm.announcement}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, announcement: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="font-bold block mb-1">ঢাকার ভেতরে ডেলিভারি ফি (৳)</label>
-                    <input
-                      type="number"
-                      value={settingsForm.insideDhakaDelivery}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, insideDhakaDelivery: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold block mb-1">ঢাকার বাইরে ডেলিভারি ফি (৳)</label>
-                    <input
-                      type="number"
-                      value={settingsForm.outsideDhakaDelivery}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, outsideDhakaDelivery: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold block mb-1">ফ্রি ডেলিভারি থ্রেশহোল্ড (৳)</label>
-                    <input
-                      type="number"
-                      value={settingsForm.freeDeliveryThreshold}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, freeDeliveryThreshold: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-bold block mb-1">বিকাশ/নগদ পেমেন্ট গ্রহণ নম্বর</label>
-                    <input
-                      type="text"
-                      value={settingsForm.bkashNumber}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, bkashNumber: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold block mb-1">হটলাইন ফোন নম্বর</label>
-                    <input
-                      type="text"
-                      value={settingsForm.phone}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition"
-                >
-                  সেটিংস সংরক্ষণ করুন
-                </button>
-              </form>
+              <AdminContentManager />
             )}
 
             {/* EXPORT DATA TAB */}
@@ -1004,10 +973,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Category Modal */}
       {showCategoryModal && editingCategory && (
-        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3">
+        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 animate-fadeIn">
           <div className="w-full max-w-sm bg-white dark:bg-[#0B1E3F] rounded-3xl p-6 border border-slate-200 dark:border-blue-900 space-y-4 text-xs">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-sm">নতুন ক্যাটাগরি</h3>
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                {editingCategory.id ? 'ক্যাটাগরি সম্পাদনা' : 'নতুন ক্যাটাগরি তৈরি'}
+              </h3>
               <button onClick={() => setShowCategoryModal(false)}><X className="w-4 h-4" /></button>
             </div>
             <form onSubmit={handleCategorySubmit} className="space-y-3">
@@ -1017,7 +988,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="text"
                   required
                   value={editingCategory.name || ''}
-                  onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                  onChange={(e) => setEditingCategory({ 
+                    ...editingCategory, 
+                    name: e.target.value,
+                    id: editingCategory.id || e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-')
+                  })}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
                 />
               </div>
@@ -1025,14 +1000,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <label className="font-bold block mb-1">নাম (বাংলা)</label>
                 <input
                   type="text"
+                  placeholder="যেমন: স্মার্ট গ্যাজেট"
                   value={editingCategory.nameBn || ''}
                   onChange={(e) => setEditingCategory({ ...editingCategory, nameBn: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
                 />
               </div>
+              <div>
+                <label className="font-bold block mb-1">আইকন (Icon)</label>
+                <select
+                  value={editingCategory.icon || 'Sparkles'}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, icon: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800 font-bold"
+                >
+                  <option value="Sparkles">Sparkles (ফিচার্ড / বিশেষ)</option>
+                  <option value="Smartphone">Smartphone (ইলেকট্রনিক্স ও গ্যাজেট)</option>
+                  <option value="Shirt">Shirt (পোশাক ও ফ্যাশন)</option>
+                  <option value="Watch">Watch (ঘড়ি ও প্রিমিয়াম এক্সেসরিজ)</option>
+                  <option value="Heart">Heart (সৌন্দর্য ও লাইফস্টাইল)</option>
+                  <option value="Home">Home (হোম ও লিভিং)</option>
+                  <option value="Layers">Layers (অন্যান্য সকল পণ্য)</option>
+                </select>
+              </div>
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400"
+                className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 cursor-pointer"
               >
                 সংরক্ষণ করুন
               </button>

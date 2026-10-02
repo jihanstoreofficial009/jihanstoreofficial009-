@@ -37,15 +37,36 @@ import {
   Coupon, 
   StoreSettings, 
   Review,
-  OrderStatus 
+  OrderStatus,
+  Advertisement,
+  LogoConfig,
+  AddressItem,
+  ContactNumber,
+  SocialLinkItem,
+  EmailContact
 } from '../types/store';
 import { 
   INITIAL_PRODUCTS, 
   INITIAL_CATEGORIES, 
   INITIAL_SETTINGS, 
   INITIAL_COUPONS, 
-  INITIAL_REVIEWS 
+  INITIAL_REVIEWS,
+  INITIAL_ADS,
+  INITIAL_LOGOS,
+  INITIAL_ADDRESSES,
+  INITIAL_PHONES,
+  INITIAL_WHATSAPPS,
+  INITIAL_EMAILS,
+  INITIAL_SOCIAL_LINKS
 } from '../data/initialData';
+import {
+  notifyNewOrder,
+  notifyOrderStatusChanged,
+  notifyWalletDepositRequest,
+  notifyWalletWithdrawRequest,
+  notifyNewReview,
+  testTelegramConnection
+} from '../lib/telegram';
 
 export interface Toast {
   id: string;
@@ -69,6 +90,8 @@ interface StoreContextType {
   coupons: Coupon[];
   settings: StoreSettings;
   reviews: Review[];
+  ads: Advertisement[];
+  activeLogo: LogoConfig;
   appliedCoupon: Coupon | null;
   cartSubtotal: number;
   deliveryFee: number;
@@ -127,6 +150,29 @@ interface StoreContextType {
   updateStoreSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
   seedInitialDataToFirestore: () => Promise<void>;
   addReview: (review: { productId?: string; rating: number; comment: string }) => Promise<void>;
+  sendTelegramTestNotification: (token?: string, chatId?: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Dynamic Branding & Logo Manager
+  setActiveLogo: (logoId: string) => Promise<void>;
+  saveLogo: (logo: LogoConfig) => Promise<void>;
+  deleteLogo: (logoId: string) => Promise<void>;
+
+  // Multi-Address & Multi-Contact Manager
+  saveAddress: (address: AddressItem) => Promise<void>;
+  deleteAddress: (id: string) => Promise<void>;
+  saveContact: (contact: ContactNumber) => Promise<void>;
+  deleteContact: (id: string, type: 'phone' | 'whatsapp') => Promise<void>;
+  saveEmailContact: (email: EmailContact) => Promise<void>;
+  deleteEmailContact: (id: string) => Promise<void>;
+  saveSocialLink: (link: SocialLinkItem) => Promise<void>;
+  deleteSocialLink: (id: string) => Promise<void>;
+
+  // Advanced Ad Manager
+  saveAd: (ad: Partial<Advertisement>) => Promise<void>;
+  deleteAd: (adId: string) => Promise<void>;
+  toggleAdStatus: (adId: string, isActive: boolean) => Promise<void>;
+  recordAdClick: (adId: string) => Promise<void>;
+  recordAdView: (adId: string) => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -160,6 +206,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [reviews, setReviews] = useState<Review[]>(INITIAL_REVIEWS);
+
+  // Dynamic Ads state
+  const [ads, setAds] = useState<Advertisement[]>(() => {
+    try {
+      const cached = localStorage.getItem('jihan_ads_cache');
+      return cached ? JSON.parse(cached) : INITIAL_ADS;
+    } catch {
+      return INITIAL_ADS;
+    }
+  });
+
+  // Dynamically resolve the currently active logo
+  const activeLogo: LogoConfig = useMemo(() => {
+    const list = settings.logos && settings.logos.length > 0 ? settings.logos : INITIAL_LOGOS;
+    return list.find(l => l.id === settings.activeLogoId) || list.find(l => l.isActive) || list[0] || INITIAL_LOGOS[0];
+  }, [settings.logos, settings.activeLogoId]);
 
   // Cart & Wishlist state
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -253,6 +315,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             };
             await setDoc(userRef, newProfile);
             setUserProfile(newProfile);
+
+            if (isDefaultAdmin) {
+              // Ensure all default ads are registered in Firestore
+              for (const ad of INITIAL_ADS) {
+                setDoc(doc(db, 'ads', ad.id), ad, { merge: true }).catch(() => {});
+              }
+            }
           }
         } catch (err) {
           console.warn('Could not sync user profile with Firestore:', err);
@@ -357,12 +426,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     );
 
+    // 6. Dynamic Ads
+    const adsPath = 'ads';
+    const unsubAds = onSnapshot(
+      collection(db, adsPath),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Advertisement));
+          list.sort((a, b) => a.displayOrder - b.displayOrder);
+          setAds(list);
+          localStorage.setItem('jihan_ads_cache', JSON.stringify(list));
+        } else {
+          setAds(INITIAL_ADS);
+        }
+      },
+      (error) => {
+        console.warn('Firestore Ads onSnapshot error:', error);
+      }
+    );
+
     return () => {
       unsubProducts();
       unsubCats();
       unsubSettings();
       unsubCoupons();
       unsubReviews();
+      unsubAds();
     };
   }, []);
 
@@ -615,14 +704,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!user) return;
     try {
       const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
+      await setDoc(userRef, {
         ...data,
         updatedAt: new Date().toISOString()
-      });
+      }, { merge: true });
       setUserProfile(prev => prev ? { ...prev, ...data } : null);
       addToast('প্রোফাইল আপডেট হয়েছে!', 'success');
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}`);
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
     }
   };
 
@@ -721,6 +810,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       clearCart();
       addToast(`অর্ডার #${orderId} সফলভাবে গ্রহন করা হয়েছে!`, 'success');
+
+      // Trigger instant Telegram Bot notification to admin
+      notifyNewOrder(orderData, settings.telegramBotToken, settings.telegramChatId).catch(err => {
+        console.warn('Telegram notification failed:', err);
+      });
+
       return orderId;
     } catch (err) {
       console.error('Order creation error:', err);
@@ -728,6 +823,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setOrders(prev => [orderData, ...prev]);
       clearCart();
       addToast(`অর্ডার #${orderId} সফলভাবে সাবমিট হয়েছে!`, 'success');
+
+      // Trigger instant Telegram Bot notification to admin
+      notifyNewOrder(orderData, settings.telegramBotToken, settings.telegramChatId).catch(err => {
+        console.warn('Telegram notification failed:', err);
+      });
+
       return orderId;
     }
   };
@@ -740,6 +841,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updatedAt: new Date().toISOString()
       });
       addToast(`অর্ডার #${orderId} বাতিল করা হয়েছে`, 'info');
+
+      const foundOrder = orders.find(o => o.id === orderId);
+      if (foundOrder) {
+        notifyOrderStatusChanged(
+          orderId,
+          foundOrder.customerName,
+          foundOrder.phone,
+          'cancelled',
+          foundOrder.totalAmount,
+          settings.telegramBotToken,
+          settings.telegramChatId
+        ).catch(() => {});
+      }
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `orders/${orderId}`);
     }
@@ -753,6 +867,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updatedAt: new Date().toISOString()
       });
       addToast(`অর্ডারের স্ট্যাটাস "${status.toUpperCase()}" এ আপডেট করা হয়েছে`, 'success');
+
+      const foundOrder = orders.find(o => o.id === orderId);
+      if (foundOrder) {
+        notifyOrderStatusChanged(
+          orderId,
+          foundOrder.customerName,
+          foundOrder.phone,
+          status,
+          foundOrder.totalAmount,
+          settings.telegramBotToken,
+          settings.telegramChatId
+        ).catch(() => {});
+      }
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `orders/${orderId}`);
     }
@@ -779,6 +906,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       await setDoc(doc(db, 'wallet_transactions', txId), tx);
       addToast('ডিপোজিট রিকোয়েস্ট সাবমিট হয়েছে! অ্যাডমিন যাচাই করে ব্যালেন্স যুক্ত করবেন।', 'success');
+
+      // Notify Telegram
+      notifyWalletDepositRequest(tx, settings.telegramBotToken, settings.telegramChatId).catch(() => {});
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, `wallet_transactions/${txId}`);
     }
@@ -807,6 +937,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       await setDoc(doc(db, 'wallet_transactions', txId), tx);
       addToast('উত্তোলন রিকোয়েস্ট সাবমিট হয়েছে! অ্যাডমিন অ্যাপ্রুভ করলে টাকা পাঠানো হবে।', 'success');
+
+      // Notify Telegram
+      notifyWalletWithdrawRequest(tx, settings.telegramBotToken, settings.telegramChatId).catch(() => {});
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, `wallet_transactions/${txId}`);
     }
@@ -956,10 +1089,238 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       await setDoc(doc(db, 'reviews', revId), newRev);
       addToast('রিভিউ যোগ করার জন্য ধন্যবাদ!', 'success');
+
+      // Trigger Telegram notification
+      const prod = products.find(p => p.id === rev.productId);
+      notifyNewReview({
+        userName: newRev.userName,
+        rating: newRev.rating,
+        comment: newRev.comment,
+        productTitle: prod?.titleBn || prod?.title
+      }, settings.telegramBotToken, settings.telegramChatId).catch(() => {});
     } catch (err) {
       // Local fallback
       setReviews(prev => [newRev, ...prev]);
       addToast('রিভিউ সফলভাবে জমা হয়েছে!', 'success');
+
+      const prod = products.find(p => p.id === rev.productId);
+      notifyNewReview({
+        userName: newRev.userName,
+        rating: newRev.rating,
+        comment: newRev.comment,
+        productTitle: prod?.titleBn || prod?.title
+      }, settings.telegramBotToken, settings.telegramChatId).catch(() => {});
+    }
+  };
+
+  const sendTelegramTestNotification = async (token?: string, chatId?: string) => {
+    return testTelegramConnection(token || settings.telegramBotToken, chatId || settings.telegramChatId);
+  };
+
+  // Dynamic Branding & Logo Manager
+  const setActiveLogo = async (logoId: string) => {
+    const logos = (settings.logos || INITIAL_LOGOS).map(l => ({
+      ...l,
+      isActive: l.id === logoId
+    }));
+    await updateStoreSettings({ activeLogoId: logoId, logos });
+    addToast('লোগো সফলভাবে অ্যাক্টিভ করা হয়েছে!', 'success');
+  };
+
+  const saveLogo = async (logo: LogoConfig) => {
+    const list = settings.logos && settings.logos.length > 0 ? settings.logos : INITIAL_LOGOS;
+    const exists = list.some(l => l.id === logo.id);
+    let updated = exists 
+      ? list.map(l => l.id === logo.id ? logo : l)
+      : [...list, logo];
+    if (logo.isActive) {
+      updated = updated.map(l => ({ ...l, isActive: l.id === logo.id }));
+    }
+    await updateStoreSettings({ 
+      logos: updated,
+      activeLogoId: logo.isActive ? logo.id : settings.activeLogoId
+    });
+    addToast('লোগো সফলভাবে সংরক্ষিত হয়েছে!', 'success');
+  };
+
+  const deleteLogo = async (logoId: string) => {
+    const list = settings.logos && settings.logos.length > 0 ? settings.logos : INITIAL_LOGOS;
+    if (list.length <= 1) {
+      addToast('কমপক্ষে একটি লোগো থাকা বাধ্যতামূলক', 'error');
+      return;
+    }
+    const filtered = list.filter(l => l.id !== logoId);
+    const newActiveId = settings.activeLogoId === logoId ? filtered[0].id : settings.activeLogoId;
+    await updateStoreSettings({ logos: filtered, activeLogoId: newActiveId });
+    addToast('লোগো মুছে ফেলা হয়েছে', 'info');
+  };
+
+  // Multi-Address & Multi-Contact Manager
+  const saveAddress = async (addressItem: AddressItem) => {
+    const list: AddressItem[] = settings.addresses && settings.addresses.length > 0 ? settings.addresses : INITIAL_ADDRESSES;
+    const exists = list.some((a: AddressItem) => a.id === addressItem.id);
+    let updated = exists
+      ? list.map((a: AddressItem) => a.id === addressItem.id ? addressItem : a)
+      : [...list, addressItem];
+    if (addressItem.isDefault) {
+      updated = updated.map((a: AddressItem) => ({ ...a, isDefault: a.id === addressItem.id }));
+    }
+    await updateStoreSettings({ 
+      addresses: updated,
+      address: addressItem.isDefault ? addressItem.address : settings.address
+    });
+    addToast('ঠিকানা সংরক্ষিত হয়েছে!', 'success');
+  };
+
+  const deleteAddress = async (id: string) => {
+    const list = (settings.addresses || INITIAL_ADDRESSES).filter((a: AddressItem) => a.id !== id);
+    await updateStoreSettings({ addresses: list });
+    addToast('ঠিকানা মুছে ফেলা হয়েছে', 'info');
+  };
+
+  const saveContact = async (contact: ContactNumber) => {
+    if (contact.type === 'whatsapp') {
+      const list: ContactNumber[] = settings.whatsapps && settings.whatsapps.length > 0 ? settings.whatsapps : INITIAL_WHATSAPPS;
+      const exists = list.some((c: ContactNumber) => c.id === contact.id);
+      let updated = exists ? list.map((c: ContactNumber) => c.id === contact.id ? contact : c) : [...list, contact];
+      if (contact.isDefault) {
+        updated = updated.map((c: ContactNumber) => ({ ...c, isDefault: c.id === contact.id }));
+      }
+      await updateStoreSettings({ whatsapps: updated, whatsapp: contact.isDefault ? contact.number : settings.whatsapp });
+    } else {
+      const list: ContactNumber[] = settings.phones && settings.phones.length > 0 ? settings.phones : INITIAL_PHONES;
+      const exists = list.some((c: ContactNumber) => c.id === contact.id);
+      let updated = exists ? list.map((c: ContactNumber) => c.id === contact.id ? contact : c) : [...list, contact];
+      if (contact.isDefault) {
+        updated = updated.map((c: ContactNumber) => ({ ...c, isDefault: c.id === contact.id }));
+      }
+      await updateStoreSettings({ phones: updated, phone: contact.isDefault ? contact.number : settings.phone });
+    }
+    addToast('যোগাযোগ নম্বর সংরক্ষিত হয়েছে!', 'success');
+  };
+
+  const deleteContact = async (id: string, type: 'phone' | 'whatsapp') => {
+    if (type === 'whatsapp') {
+      const list = (settings.whatsapps || INITIAL_WHATSAPPS).filter((c: ContactNumber) => c.id !== id);
+      await updateStoreSettings({ whatsapps: list });
+    } else {
+      const list = (settings.phones || INITIAL_PHONES).filter((c: ContactNumber) => c.id !== id);
+      await updateStoreSettings({ phones: list });
+    }
+    addToast('নম্বর মুছে ফেলা হয়েছে', 'info');
+  };
+
+  const saveEmailContact = async (emailItem: EmailContact) => {
+    const list: EmailContact[] = settings.emails && settings.emails.length > 0 ? settings.emails : INITIAL_EMAILS;
+    const exists = list.some((e: EmailContact) => e.id === emailItem.id);
+    let updated = exists ? list.map((e: EmailContact) => e.id === emailItem.id ? emailItem : e) : [...list, emailItem];
+    if (emailItem.isDefault) {
+      updated = updated.map((e: EmailContact) => ({ ...e, isDefault: e.id === emailItem.id }));
+    }
+    await updateStoreSettings({ emails: updated, email: emailItem.isDefault ? emailItem.email : settings.email });
+    addToast('ইমেইল সংরক্ষিত হয়েছে!', 'success');
+  };
+
+  const deleteEmailContact = async (id: string) => {
+    const list = (settings.emails || INITIAL_EMAILS).filter((e: EmailContact) => e.id !== id);
+    await updateStoreSettings({ emails: list });
+    addToast('ইমেইল মুছে ফেলা হয়েছে', 'info');
+  };
+
+  const saveSocialLink = async (link: SocialLinkItem) => {
+    const list: SocialLinkItem[] = settings.socialLinks && settings.socialLinks.length > 0 ? settings.socialLinks : INITIAL_SOCIAL_LINKS;
+    const exists = list.some((s: SocialLinkItem) => s.id === link.id);
+    const updated = exists ? list.map((s: SocialLinkItem) => s.id === link.id ? link : s) : [...list, link];
+    updated.sort((a: SocialLinkItem, b: SocialLinkItem) => a.displayOrder - b.displayOrder);
+    await updateStoreSettings({ socialLinks: updated });
+    addToast('সোশ্যাল লিংক সংরক্ষিত হয়েছে!', 'success');
+  };
+
+  const deleteSocialLink = async (id: string) => {
+    const list = (settings.socialLinks || INITIAL_SOCIAL_LINKS).filter((s: SocialLinkItem) => s.id !== id);
+    await updateStoreSettings({ socialLinks: list });
+    addToast('সোশ্যাল লিংক মুছে ফেলা হয়েছে', 'info');
+  };
+
+  // Advanced Ad Manager
+  const saveAd = async (adData: Partial<Advertisement>) => {
+    const id = adData.id || 'ad-' + Date.now().toString().slice(-6);
+    const payload: Advertisement = {
+      id,
+      title: adData.title || 'Special Promotion',
+      titleBn: adData.titleBn || '',
+      description: adData.description || '',
+      advertiserName: adData.advertiserName || 'Jihan Store',
+      image: adData.image || 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200',
+      videoUrl: adData.videoUrl || '',
+      destinationUrl: adData.destinationUrl || '#',
+      buttonText: adData.buttonText || 'অফার দেখুন',
+      placement: adData.placement || 'home_top',
+      displayOrder: Number(adData.displayOrder) || 1,
+      isActive: adData.isActive !== false,
+      startDate: adData.startDate || '',
+      endDate: adData.endDate || '',
+      clicks: adData.clicks || 0,
+      views: adData.views || 0,
+      createdAt: adData.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    try {
+      await setDoc(doc(db, 'ads', id), payload, { merge: true });
+      addToast('বিজ্ঞাপন সফলভাবে সংরক্ষিত হয়েছে!', 'success');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `ads/${id}`);
+    }
+  };
+
+  const deleteAd = async (adId: string) => {
+    try {
+      await deleteDoc(doc(db, 'ads', adId));
+      addToast('বিজ্ঞাপনটি মুছে ফেলা হয়েছে', 'info');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `ads/${adId}`);
+    }
+  };
+
+  const toggleAdStatus = async (adId: string, isActive: boolean) => {
+    try {
+      const existingAd = ads.find(a => a.id === adId) || INITIAL_ADS.find(a => a.id === adId);
+      const dataToSave = existingAd
+        ? { ...existingAd, isActive, updatedAt: new Date().toISOString() }
+        : { id: adId, isActive, updatedAt: new Date().toISOString() };
+
+      await setDoc(doc(db, 'ads', adId), dataToSave, { merge: true });
+      addToast(isActive ? 'বিজ্ঞাপন সক্রিয় করা হয়েছে' : 'বিজ্ঞাপন বন্ধ করা হয়েছে', 'info');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `ads/${adId}`);
+    }
+  };
+
+  const recordAdClick = async (adId: string) => {
+    try {
+      const adRef = doc(db, 'ads', adId);
+      const snap = await getDoc(adRef);
+      if (snap.exists()) {
+        await updateDoc(adRef, {
+          clicks: increment(1)
+        });
+      }
+    } catch {
+      // Non-blocking
+    }
+  };
+
+  const recordAdView = async (adId: string) => {
+    try {
+      const adRef = doc(db, 'ads', adId);
+      const snap = await getDoc(adRef);
+      if (snap.exists()) {
+        await updateDoc(adRef, {
+          views: increment(1)
+        });
+      }
+    } catch {
+      // Non-blocking
     }
   };
 
@@ -983,6 +1344,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Seed reviews
       for (const r of INITIAL_REVIEWS) {
         await setDoc(doc(db, 'reviews', r.id), r, { merge: true });
+      }
+      // Seed ads
+      for (const a of INITIAL_ADS) {
+        await setDoc(doc(db, 'ads', a.id), a, { merge: true });
       }
       addToast('জিহান স্টোরের প্রাথমিক ডাটাবেজ সফলভাবে লোড হয়েছে!', 'success');
     } catch (err) {
@@ -1009,6 +1374,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         coupons,
         settings,
         reviews,
+        ads,
+        activeLogo,
         appliedCoupon,
         cartSubtotal,
         deliveryFee,
@@ -1048,7 +1415,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteCoupon,
         updateStoreSettings,
         seedInitialDataToFirestore,
-        addReview
+        addReview,
+        sendTelegramTestNotification,
+        setActiveLogo,
+        saveLogo,
+        deleteLogo,
+        saveAddress,
+        deleteAddress,
+        saveContact,
+        deleteContact,
+        saveEmailContact,
+        deleteEmailContact,
+        saveSocialLink,
+        deleteSocialLink,
+        saveAd,
+        deleteAd,
+        toggleAdStatus,
+        recordAdClick,
+        recordAdView
       }}
     >
       {children}

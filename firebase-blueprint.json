@@ -122,11 +122,20 @@
     },
     "StoreSettings": {
       "title": "StoreSettings",
-      "description": "Store configuration and contact details",
+      "description": "Store configuration, multi-logo, dynamic content, and contact details",
       "type": "object",
       "properties": {
         "storeName": { "type": "string", "maxLength": 100 },
+        "storeNameBn": { "type": "string", "maxLength": 100 },
         "storeSlogan": { "type": "string", "maxLength": 200 },
+        "storeSloganBn": { "type": "string", "maxLength": 200 },
+        "activeLogoId": { "type": "string", "maxLength": 50 },
+        "logos": { "type": "array" },
+        "addresses": { "type": "array" },
+        "phones": { "type": "array" },
+        "emails": { "type": "array" },
+        "whatsapps": { "type": "array" },
+        "socialLinks": { "type": "array" },
         "phone": { "type": "string", "maxLength": 50 },
         "whatsapp": { "type": "string", "maxLength": 50 },
         "email": { "type": "string", "maxLength": 200 },
@@ -138,9 +147,38 @@
         "bkashNumber": { "type": "string", "maxLength": 50 },
         "nagadNumber": { "type": "string", "maxLength": 50 },
         "facebookUrl": { "type": "string", "maxLength": 500 },
-        "youtubeUrl": { "type": "string", "maxLength": 500 }
+        "youtubeUrl": { "type": "string", "maxLength": 500 },
+        "telegramBotToken": { "type": "string", "maxLength": 200 },
+        "telegramChatId": { "type": "string", "maxLength": 100 },
+        "googleManagementId": { "type": "string", "maxLength": 100 }
       },
       "required": ["storeName"]
+    },
+    "Advertisement": {
+      "title": "Advertisement",
+      "description": "Promotional banner and 3rd-party brand advertisement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "titleBn": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "advertiserName": { "type": "string", "maxLength": 150 },
+        "image": { "type": "string", "maxLength": 1000 },
+        "videoUrl": { "type": "string", "maxLength": 1000 },
+        "destinationUrl": { "type": "string", "maxLength": 1000 },
+        "buttonText": { "type": "string", "maxLength": 50 },
+        "placement": { "type": "string", "enum": ["home_top", "home_middle", "home_bottom", "product_page", "category_page", "cart_drawer"] },
+        "displayOrder": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "clicks": { "type": "number" },
+        "views": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "advertiserName", "image", "destinationUrl", "placement", "isActive"]
     },
     "Review": {
       "title": "Review",
@@ -199,6 +237,10 @@
     "/store_settings/{settingId}": {
       "schema": { "$ref": "#/entities/StoreSettings" },
       "description": "Store settings and contact information"
+    },
+    "/ads/{adId}": {
+      "schema": { "$ref": "#/entities/Advertisement" },
+      "description": "Promotional and sponsored advertisements"
     },
     "/reviews/{reviewId}": {
       "schema": { "$ref": "#/entities/Review" },

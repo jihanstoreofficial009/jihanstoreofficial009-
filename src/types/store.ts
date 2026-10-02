@@ -105,9 +105,88 @@ export interface Coupon {
   expiryDate?: string;
 }
 
+export interface LogoConfig {
+  id: string;
+  name: string;
+  nameBn?: string;
+  type: 'crest' | 'minimal' | 'monogram' | 'custom';
+  url?: string;
+  tagline?: string;
+  taglineBn?: string;
+  isActive: boolean;
+}
+
+export interface AddressItem {
+  id: string;
+  title: string;
+  address: string;
+  city: string;
+  phone?: string;
+  isDefault: boolean;
+  isEnabled: boolean;
+}
+
+export interface ContactNumber {
+  id: string;
+  title: string;
+  number: string;
+  type: 'phone' | 'whatsapp' | 'support' | 'billing';
+  isDefault: boolean;
+  isEnabled: boolean;
+}
+
+export interface EmailContact {
+  id: string;
+  title: string;
+  email: string;
+  isDefault: boolean;
+  isEnabled: boolean;
+}
+
+export interface SocialLinkItem {
+  id: string;
+  platform: 'facebook' | 'youtube' | 'instagram' | 'tiktok' | 'twitter' | 'linkedin' | 'whatsapp' | 'other';
+  title: string;
+  url: string;
+  isEnabled: boolean;
+  displayOrder: number;
+}
+
+export type AdPlacement = 'home_top' | 'home_middle' | 'home_bottom' | 'product_page' | 'category_page' | 'cart_drawer';
+
+export interface Advertisement {
+  id: string;
+  title: string;
+  titleBn?: string;
+  description: string;
+  advertiserName: string;
+  image: string;
+  videoUrl?: string;
+  destinationUrl: string;
+  buttonText: string;
+  placement: AdPlacement;
+  displayOrder: number;
+  isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+  clicks: number;
+  views: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface StoreSettings {
   storeName: string;
+  storeNameBn?: string;
   storeSlogan: string;
+  storeSloganBn?: string;
+  activeLogoId: string;
+  logos: LogoConfig[];
+  addresses: AddressItem[];
+  phones: ContactNumber[];
+  emails: EmailContact[];
+  whatsapps: ContactNumber[];
+  socialLinks: SocialLinkItem[];
   phone: string;
   whatsapp: string;
   email: string;
@@ -120,6 +199,9 @@ export interface StoreSettings {
   nagadNumber: string;
   facebookUrl?: string;
   youtubeUrl?: string;
+  telegramBotToken?: string;
+  telegramChatId?: string;
+  googleManagementId?: string;
 }
 
 export interface Review {

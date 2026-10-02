@@ -15,6 +15,7 @@ import { WishlistModal } from './components/WishlistModal';
 import { ReviewsAndOffersSection } from './components/ReviewsAndOffersSection';
 import { Footer } from './components/Footer';
 import { ToastContainer } from './components/ToastContainer';
+import { AdBanner } from './components/AdBanner';
 import { Product, Order } from './types/store';
 import { 
   SlidersHorizontal, 
@@ -146,16 +147,21 @@ const MainStoreContent: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-12">
         {/* Hero Section */}
         {selectedCategory === 'all' && !searchQuery && (
-          <HeroBanner
-            onShopNow={() => {
-              const el = document.getElementById('products-section');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            onExploreOffers={() => {
-              const el = document.getElementById('offers-section');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          />
+          <>
+            <HeroBanner
+              onShopNow={() => {
+                const el = document.getElementById('products-section');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              onExploreOffers={() => {
+                const el = document.getElementById('offers-section');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            />
+
+            {/* Ad Placement: Home Top (Hero Sub-Banner) */}
+            <AdBanner placement="home_top" />
+          </>
         )}
 
         {/* Categories Section */}
@@ -167,6 +173,9 @@ const MainStoreContent: React.FC = () => {
             el?.scrollIntoView({ behavior: 'smooth' });
           }}
         />
+
+        {/* Ad Placement: Home Middle (Between Categories & Products) */}
+        <AdBanner placement="home_middle" />
 
         {/* Products Listing Section */}
         <section id="products-section" className="space-y-6 pt-4">
@@ -258,6 +267,9 @@ const MainStoreContent: React.FC = () => {
         <section id="offers-section">
           <ReviewsAndOffersSection />
         </section>
+
+        {/* Ad Placement: Home Bottom (Before Contact & Support) */}
+        <AdBanner placement="home_bottom" />
 
         {/* Contact Section */}
         <section className="rounded-3xl bg-white dark:bg-[#0B1E3F]/80 border border-slate-200 dark:border-blue-900/60 p-6 sm:p-10 shadow-sm space-y-6">

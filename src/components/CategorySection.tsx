@@ -1,5 +1,6 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
+import { AdBanner } from './AdBanner';
 import { 
   Smartphone, 
   Shirt, 
@@ -121,6 +122,9 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
           );
         })}
       </div>
+
+      {/* Ad Placement: Category Page Banner */}
+      <AdBanner placement="category_page" className="mt-4" />
     </section>
   );
 };

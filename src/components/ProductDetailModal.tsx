@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../types/store';
 import { useStore } from '../context/StoreContext';
+import { AdBanner } from './AdBanner';
 import { 
   X, 
   Star, 
@@ -266,6 +267,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {product.description}
             </p>
           </div>
+
+          {/* Ad Placement: Product Page Banner */}
+          <AdBanner placement="product_page" compact={true} />
 
           {/* Customer Reviews Section */}
           <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-blue-900/60">

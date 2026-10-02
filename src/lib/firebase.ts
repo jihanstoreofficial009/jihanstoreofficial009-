@@ -26,12 +26,27 @@ import {
   orderBy, 
   onSnapshot,
   serverTimestamp,
-  increment
+  increment,
+  initializeFirestore,
+  setLogLevel
 } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '@/firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Set silent log level so initial reconnection warnings don't log to console.error
+setLogLevel('error');
+
+// Initialize with long-polling auto-detection for reliable connections in iframe environments
+try {
+  initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+  }, firebaseConfig.firestoreDatabaseId);
+} catch {
+  // Already initialized or fallback
+}
+
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
@@ -85,12 +100,19 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 // Connection test as required by skill
-export async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+export async function testConnection(retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await getDocFromServer(doc(db, 'test', 'connection'));
+      return;
+    } catch (error) {
+      if (i === retries - 1) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.warn("Please check your Firebase configuration.");
+        }
+      } else {
+        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      }
     }
   }
 }
