@@ -63,7 +63,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl md:rounded-3xl border border-amber-500/30 bg-gradient-to-r from-[#0B1E3F] via-[#0F2752] to-[#122B5C] text-white shadow-xl transition-all duration-300 hover:border-amber-400/60 ${className}`}
+      className={`relative overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl border border-amber-500/30 bg-gradient-to-r from-[#0B1E3F] via-[#0F2752] to-[#122B5C] text-white shadow-xl transition-all duration-300 hover:border-amber-400/60 w-full max-w-full ${className}`}
     >
       {/* Background Graphic or Media */}
       <div className="absolute inset-0 z-0">
@@ -87,30 +87,30 @@ export const AdBanner: React.FC<AdBannerProps> = ({
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="relative z-10 p-3.5 sm:p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 min-w-0 w-full">
         {/* Left: Advertiser badge & texts */}
-        <div className="flex-1 space-y-2.5 text-center md:text-left">
+        <div className="flex-1 space-y-2 text-center md:text-left min-w-0 w-full">
           {/* Top badges */}
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30 text-[10px] font-black uppercase tracking-wider">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 sm:gap-2">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30 text-[10px] font-black uppercase tracking-wider shrink-0">
               <Sparkles className="w-3 h-3 text-amber-400" />
               <span>বিজ্ঞাপন / Sponsored</span>
             </span>
 
             {currentAd.advertiserName && (
-              <span className="text-[11px] font-bold text-slate-300">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-300 truncate">
                 বিজ্ঞাপনদাতা: <span className="text-amber-400 font-extrabold">{currentAd.advertiserName}</span>
               </span>
             )}
           </div>
 
           {/* Ad Titles */}
-          <div className="space-y-1">
-            <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tight drop-shadow-sm">
+          <div className="space-y-0.5 sm:space-y-1">
+            <h3 className="text-base sm:text-xl md:text-2xl font-black text-white tracking-tight drop-shadow-sm break-words">
               {currentAd.titleBn || currentAd.title}
             </h3>
             {currentAd.titleBn && currentAd.title !== currentAd.titleBn && (
-              <p className="text-xs sm:text-sm text-amber-300/90 font-medium">
+              <p className="text-xs sm:text-sm text-amber-300/90 font-medium truncate">
                 {currentAd.title}
               </p>
             )}
@@ -118,19 +118,19 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
           {/* Description */}
           {currentAd.description && (
-            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed line-clamp-3 sm:line-clamp-none">
               {currentAd.description}
             </p>
           )}
         </div>
 
         {/* Right / Center: Image Thumbnail or Video Preview + CTA Button */}
-        <div className="shrink-0 flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto justify-center">
+        <div className="shrink-0 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full md:w-auto justify-center">
           {/* Ad Image preview (if compact is false) */}
           {!compact && currentAd.image && (
             <div 
               onClick={handleClick}
-              className="relative w-36 h-24 sm:w-44 sm:h-28 rounded-2xl overflow-hidden border border-amber-400/30 shadow-lg cursor-pointer group shrink-0 hidden sm:block"
+              className="relative w-36 h-24 sm:w-44 sm:h-28 rounded-xl sm:rounded-2xl overflow-hidden border border-amber-400/30 shadow-lg cursor-pointer group shrink-0 hidden sm:block"
             >
               <img
                 src={currentAd.image}
@@ -144,7 +144,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
           {/* Call to Action Button */}
           <button
             onClick={handleClick}
-            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-900/30 hover:from-amber-300 hover:to-yellow-400 transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-900/30 hover:from-amber-300 hover:to-yellow-400 transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer shrink-0"
           >
             <span>{currentAd.buttonText || 'অফার দেখুন'}</span>
             <ExternalLink className="w-4 h-4" />

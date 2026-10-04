@@ -1,7 +1,15 @@
 import { Order, WalletTransaction, StoreSettings } from '../types/store';
 
-export const DEFAULT_TELEGRAM_BOT_TOKEN = '8627436875:AAGxH3Q4LQFkG1WrSTOKiF3Z9zyP4Fkd60k';
+export const DEFAULT_TELEGRAM_BOT_TOKEN = '8714872675:AAGsB9U_eCOIG5Os75KisW_ieJaEkKTdS6U';
 export const DEFAULT_TELEGRAM_CHAT_ID = '6607631932';
+
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 /**
  * Sends a notification message to the configured Telegram chat via the Telegram Bot API.
@@ -37,6 +45,19 @@ export async function sendTelegramMessage(
 
     const data = await response.json();
     if (!response.ok || !data.ok) {
+      // Fallback without parse_mode if entity parsing failed
+      if (data.description && data.description.includes('parse entities')) {
+        const plainText = messageHtml.replace(/<[^>]*>/g, '');
+        const retryRes = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chat, text: plainText }),
+        });
+        const retryData = await retryRes.json();
+        if (retryRes.ok && retryData.ok) {
+          return { success: true };
+        }
+      }
       console.error('Telegram API error:', data);
       return { success: false, error: data.description || 'Failed to send Telegram message' };
     }
@@ -56,38 +77,38 @@ export async function sendTelegramMessage(
  */
 export async function notifyNewOrder(order: Order, token?: string, chatId?: string) {
   const itemsText = order.items
-    .map((item, idx) => `  ${idx + 1}. <b>${item.title}</b> × ${item.quantity} = ৳${(item.price * item.quantity).toLocaleString()}`)
+    .map((item, idx) => `  ${idx + 1}. <b>${escapeHtml(item.title)}</b> × ${item.quantity} = ৳${(item.price * item.quantity).toLocaleString()}`)
     .join('\n');
 
   const paymentMethodLabel = 
-    order.paymentMethod === 'cod' ? '💵 ক্যাশ অন ডেলিভারি (COD)' :
+    order.paymentMethod === 'cod' ? '💵 ক্যাশ অন ডেলিভারি (Cash on Delivery)' :
     order.paymentMethod === 'wallet' ? '💳 জিহান ওয়ালেট (Wallet Paid)' :
     order.paymentMethod === 'bkash' ? '📱 বিকাশ (bKash)' : '📱 নগদ (Nagad)';
 
   const text = `
-🛍️ <b>[জিহান স্টোর] নতুন অর্ডার গৃহীত হয়েছে!</b>
-━━━━━━━━━━━━━━━━━━
-🆔 <b>অর্ডার আইডি:</b> #${order.id}
+🛍️ <b>[জিহান স্টোর] নতুন অর্ডার রিপোর্ট!</b>
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 <b>অর্ডার আইডি:</b> <code>#${order.id}</code>
 📅 <b>তারিখ:</b> ${new Date(order.createdAt).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' })}
 
-👤 <b>গ্রাহকের তথ্য:</b>
-• নাম: <b>${order.customerName}</b>
-• ফোন: <code>${order.phone}</code>
-• ঠিকানা: ${order.address}, ${order.city}
-${order.note ? `• নোট: <i>${order.note}</i>\n` : ''}
-📦 <b>অর্ডারকৃত পণ্যসমূহ:</b>
+👤 <b>গ্রাহকের বিস্তারিত তথ্য:</b>
+• নাম: <b>${escapeHtml(order.customerName)}</b>
+• ফোন নম্বর: <code>${order.phone}</code>
+• ডেলিভারি ঠিকানা: ${escapeHtml(order.address)}, ${escapeHtml(order.city)}
+${order.note ? `• বিশেষ নির্দেশনা/নোট: <i>${escapeHtml(order.note)}</i>\n` : ''}
+📦 <b>অর্ডারকৃত পণ্যের তালিকা:</b>
 ${itemsText}
 
-💰 <b>বিলিং তথ্য:</b>
-• সাবটোটাল: ৳${order.subtotal.toLocaleString()}
-${order.discount > 0 ? `• কুপন ছাড়: -৳${order.discount.toLocaleString()}\n` : ''}• ডেলিভারি ফি: ${order.deliveryFee === 0 ? 'ফ্রি' : `৳${order.deliveryFee}`}
-• <b>সর্বমোট বিল:</b> ৳${order.totalAmount.toLocaleString()}
+💰 <b>বিলিং হিসাব:</b>
+• পণ্যের মোট দাম: ৳${order.subtotal.toLocaleString()}
+${order.discount > 0 ? `• ডিসকাউন্ট ছাড়: -৳${order.discount.toLocaleString()}\n` : ''}• ডেলিভারি চার্জ: ${order.deliveryFee === 0 ? 'ফ্রি (Free Delivery)' : `৳${order.deliveryFee}`}
+• <b>সর্বমোট প্রদেয় বিল: ৳${order.totalAmount.toLocaleString()}</b>
 
-💳 <b>পেমেন্ট মেথড:</b> ${paymentMethodLabel}
+💳 <b>পেমেন্ট মাধ্যম:</b> ${paymentMethodLabel}
 📊 <b>পেমেন্ট স্ট্যাটাস:</b> ${order.paymentStatus.toUpperCase()}
-${order.trxId ? `🔑 <b>TrxID:</b> <code>${order.trxId}</code>\n` : ''}
-━━━━━━━━━━━━━━━━━━
-<i>অ্যাডমিন প্যানেল থেকে দ্রুত প্রসেসিং শুরু করুন।</i>
+${order.trxId ? `🔑 <b>TrxID (ট্রানজেকশন আইডি):</b> <code>${escapeHtml(order.trxId)}</code>\n` : ''}
+━━━━━━━━━━━━━━━━━━━━━━
+<i>অ্যাডমিন প্যানেল থেকে দ্রুত পার্সেল প্রসেসিং শুরু করুন।</i>
 `;
 
   return sendTelegramMessage(text.trim(), token, chatId);
@@ -109,19 +130,19 @@ export async function notifyOrderStatusChanged(
     pending: '⏳ পেন্ডিং (Pending)',
     confirmed: '✅ নিশ্চিত (Confirmed)',
     processing: '⚙️ প্রসেসিং (Processing)',
-    shipped: '🚚 শিপড (Shipped)',
+    shipped: '🚚 শিপড / ডেলিভারিতে আছে (Shipped)',
     delivered: '📦 ডেলিভারি সম্পন্ন (Delivered)',
     cancelled: '❌ বাতিল (Cancelled)',
   };
 
   const text = `
 🔄 <b>[জিহান স্টোর] অর্ডারের স্ট্যাটাস আপডেট</b>
-━━━━━━━━━━━━━━━━━━
-🆔 <b>অর্ডার আইডি:</b> #${orderId}
-👤 <b>গ্রাহক:</b> ${customerName} (<code>${phone}</code>)
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 <b>অর্ডার আইডি:</b> <code>#${orderId}</code>
+👤 <b>গ্রাহকের নাম:</b> ${escapeHtml(customerName)} (<code>${phone}</code>)
 💰 <b>টাকার পরিমাণ:</b> ৳${totalAmount.toLocaleString()}
-📌 <b>নতুন স্ট্যাটাস:</b> ${statusLabels[newStatus] || newStatus.toUpperCase()}
-⏰ <b>সময়:</b> ${new Date().toLocaleTimeString('bn-BD')}
+📌 <b>বর্তমান স্ট্যাটাস:</b> <b>${statusLabels[newStatus] || newStatus.toUpperCase()}</b>
+⏰ <b>আপডেট সময়:</b> ${new Date().toLocaleTimeString('bn-BD')}
 `;
 
   return sendTelegramMessage(text.trim(), token, chatId);
@@ -137,18 +158,18 @@ export async function notifyWalletDepositRequest(
 ) {
   const text = `
 💰 <b>[জিহান স্টোর] নতুন ওয়ালেট ডিপোজিট রিকোয়েস্ট!</b>
-━━━━━━━━━━━━━━━━━━
-🆔 <b>ট্রানজেকশন আইডি:</b> #${tx.id}
-👤 <b>ব্যবহারকারী:</b> ${tx.userName || 'গ্রাহক'}
-📧 <b>ইমেইল:</b> ${tx.userEmail}
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 <b>ট্রানজেকশন আইডি:</b> <code>#${tx.id}</code>
+👤 <b>ব্যবহারকারী:</b> ${escapeHtml(tx.userName || 'গ্রাহক')}
+📧 <b>ইমেইল:</b> ${escapeHtml(tx.userEmail)}
 
-💵 <b>পরিমাণ:</b> ৳${tx.amount.toLocaleString()}
-📱 <b>মেথড:</b> ${tx.method.toUpperCase()}
-📞 <b>প্রেরক নম্বর:</b> <code>${tx.senderNumber || 'N/A'}</code>
-🔑 <b>TrxID:</b> <code>${tx.trxId || 'N/A'}</code>
+💵 <b>জমার পরিমাণ:</b> <b>৳${tx.amount.toLocaleString()}</b>
+📱 <b>পেমেন্ট মাধ্যম:</b> ${tx.method.toUpperCase()}
+📞 <b>প্রেরক ফোন নম্বর:</b> <code>${tx.senderNumber || 'N/A'}</code>
+🔑 <b>TrxID (ট্রানজেকশন আইডি):</b> <code>${escapeHtml(tx.trxId || 'N/A')}</code>
 ⏰ <b>সময়:</b> ${new Date(tx.createdAt).toLocaleTimeString('bn-BD')}
 
-<i>দয়া করে অ্যাডমিন প্যানেল থেকে যাচাই করে অনুমোদন (Approve) করুন।</i>
+<i>দয়া করে অ্যাডমিন প্যানেল থেকে টাকা যাচাই করে অনুমোদন (Approve) করুন।</i>
 `;
 
   return sendTelegramMessage(text.trim(), token, chatId);
@@ -163,18 +184,18 @@ export async function notifyWalletWithdrawRequest(
   chatId?: string
 ) {
   const text = `
-💸 <b>[জিহান স্টোর] নতুন টাকা উত্তোলন রিকোয়েস্ট!</b>
-━━━━━━━━━━━━━━━━━━
-🆔 <b>রিকোয়েস্ট আইডি:</b> #${tx.id}
-👤 <b>ব্যবহারকারী:</b> ${tx.userName || 'গ্রাহক'}
-📧 <b>ইমেইল:</b> ${tx.userEmail}
+💸 <b>[জিহান স্টোর] নতুন টাকা উত্তোলন (Withdraw) রিকোয়েস্ট!</b>
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 <b>রিকোয়েস্ট আইডি:</b> <code>#${tx.id}</code>
+👤 <b>ব্যবহারকারী:</b> ${escapeHtml(tx.userName || 'গ্রাহক')}
+📧 <b>ইমেইল:</b> ${escapeHtml(tx.userEmail)}
 
-💵 <b>উত্তোলন পরিমাণ:</b> ৳${tx.amount.toLocaleString()}
-📱 <b>মেথড:</b> ${tx.method.toUpperCase()}
-📞 <b>প্রাপক নম্বর/অ্যাকাউন্ট:</b> <code>${tx.senderNumber || 'N/A'}</code>
+💵 <b>উত্তোলন পরিমাণ:</b> <b>৳${tx.amount.toLocaleString()}</b>
+📱 <b>পেমেন্ট মাধ্যম:</b> ${tx.method.toUpperCase()}
+📞 <b>টাকা পাঠানোর অ্যাকাউন্ট/নম্বর:</b> <code>${tx.senderNumber || 'N/A'}</code>
 ⏰ <b>সময়:</b> ${new Date(tx.createdAt).toLocaleTimeString('bn-BD')}
 
-<i>দয়া করে গ্রাহকের অ্যাকাউন্টে টাকা পাঠিয়ে অ্যাডমিন প্যানেলে অ্যাপ্রুভ করুন।</i>
+<i>দয়া করে গ্রাহকের নম্বরে টাকা পাঠিয়ে অ্যাডমিন প্যানেলে অ্যাপ্রুভ করুন।</i>
 `;
 
   return sendTelegramMessage(text.trim(), token, chatId);
@@ -191,12 +212,12 @@ export async function notifyNewReview(
   const stars = '⭐'.repeat(rev.rating);
   const text = `
 💬 <b>[জিহান স্টোর] নতুন গ্রাহক রিভিউ জমা হয়েছে!</b>
-━━━━━━━━━━━━━━━━━━
-👤 <b>গ্রাহক:</b> ${rev.userName}
+━━━━━━━━━━━━━━━━━━━━━━
+👤 <b>গ্রাহক:</b> ${escapeHtml(rev.userName)}
 ⭐ <b>রেটিং:</b> ${stars} (${rev.rating}/5)
-${rev.productTitle ? `📦 <b>পণ্য:</b> ${rev.productTitle}\n` : ''}
+${rev.productTitle ? `📦 <b>পণ্য:</b> ${escapeHtml(rev.productTitle)}\n` : ''}
 📝 <b>মন্তব্য:</b>
-<i>"${rev.comment}"</i>
+<i>"${escapeHtml(rev.comment)}"</i>
 `;
 
   return sendTelegramMessage(text.trim(), token, chatId);
@@ -208,9 +229,17 @@ ${rev.productTitle ? `📦 <b>পণ্য:</b> ${rev.productTitle}\n` : ''}
 export async function testTelegramConnection(token?: string, chatId?: string) {
   const text = `
 🤖 <b>[জিহান স্টোর] টেলিগ্রাম বট সফলভাবে কানেক্ট হয়েছে!</b>
-━━━━━━━━━━━━━━━━━━
-✅ আপনার টেলিগ্রাম বট ও ইউজার আইডি সঠিকভাবে সংযুক্ত হয়েছে।
-এখন থেকে যেকোনো নতুন অর্ডার, ওয়ালেট ডিপোজিট/উত্তোলন এবং স্টোর নোটিফিকেশন সরাসরি এই চ্যাটে পেয়ে যাবেন।
+━━━━━━━━━━━━━━━━━━━━━━
+✅ <b>টেলিগ্রাম বট ও ইউজার আইডি ১০০% সক্রিয়:</b>
+• <b>বট টোকেন:</b> <code>${(token || DEFAULT_TELEGRAM_BOT_TOKEN).slice(0, 10)}...</code>
+• <b>ইউজার আইডি:</b> <code>${chatId || DEFAULT_TELEGRAM_CHAT_ID}</code>
+
+🚀 এখন থেকে স্টোরের প্রতিটি নোটিফিকেশন সরাসরি এখানে পাবেন:
+1. 🛍️ সকল নতুন অর্ডার রিপোর্ট ও কাস্টমার ডিটেইলস
+2. 🔄 অর্ডারের স্ট্যাটাস পরিবর্তন অ্যালার্ট
+3. 💰 ওয়ালেট ডিপোজিট রিকোয়েস্ট (TrxID সহ)
+4. 💸 ওয়ালেট উইথড্র রিকোয়েস্ট
+5. ⭐ নতুন গ্রাহক রিভিউ
 
 🛒 <b>জিহান স্টোর</b> — <i>বিশ্বাসের সাথে অনলাইন শপিং</i>
 `;

@@ -729,7 +729,7 @@ export const AdminContentManager: React.FC = () => {
                 <label className="font-bold text-slate-200 block mb-1">টেলিগ্রাম বট API টোকেন</label>
                 <input
                   type="text"
-                  value={formSettings.telegramBotToken || '8627436875:AAGxH3Q4LQFkG1WrSTOKiF3Z9zyP4Fkd60k'}
+                  value={formSettings.telegramBotToken || '8714872675:AAGsB9U_eCOIG5Os75KisW_ieJaEkKTdS6U'}
                   onChange={(e) => setFormSettings({ ...formSettings, telegramBotToken: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-white dark:bg-blue-950/80 border border-slate-300 dark:border-blue-700 text-slate-900 dark:text-white font-mono text-[11px]"
                 />
@@ -766,7 +766,7 @@ export const AdminContentManager: React.FC = () => {
                   setTelegramStatus(null);
                   try {
                     const res = await sendTelegramTestNotification(
-                      formSettings.telegramBotToken || '8627436875:AAGxH3Q4LQFkG1WrSTOKiF3Z9zyP4Fkd60k',
+                      formSettings.telegramBotToken || '8714872675:AAGsB9U_eCOIG5Os75KisW_ieJaEkKTdS6U',
                       formSettings.telegramChatId || '6607631932'
                     );
                     if (res.success) {

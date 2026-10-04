@@ -45,12 +45,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenAuth }) => {
   const activeSocialLinks = settings.socialLinks?.filter(s => s.isEnabled) || [];
 
   return (
-    <footer className="bg-[#07162E] text-slate-300 border-t border-amber-500/20 pt-12 pb-8 px-4 sm:px-6 transition-colors">
-      <div className="max-w-7xl mx-auto space-y-10">
+    <footer className="bg-[#07162E] text-slate-300 border-t border-amber-500/20 pt-8 sm:pt-12 pb-8 px-3.5 sm:px-6 transition-colors w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto space-y-8 sm:space-y-10 w-full">
         {/* Top Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 w-full">
           {/* Col 1: About & Dynamic Slogan */}
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             <Logo size="md" showSlogan={true} />
             <p className="text-xs text-slate-400 leading-relaxed">
               {settings.storeNameBn || settings.storeName} — সারা বাংলাদেশে নির্ভরযোগ্য ও আসল পণ্যের বিশ্বস্ত অনলাইন শপ। ফ্যাশন, গ্যাজেটস ও লাইফস্টাইল প্রডাক্ট দ্রুততম সময়ে আপনার দোরগোড়ায়।
@@ -221,17 +221,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenAuth }) => {
             <p className="text-slate-400">
               আমরা ক্যাশ অন ডেলিভারি এবং সকল বিশ্বস্ত মাধ্যমে পেমেন্ট গ্রহণ করি:
             </p>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <span className="px-2.5 py-1 rounded-md bg-blue-950/80 border border-blue-800 text-[11px] font-bold text-slate-200">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-1 w-full">
+              <span className="px-2 sm:px-2.5 py-1 rounded-md bg-blue-950/80 border border-blue-800 text-[10px] sm:text-[11px] font-bold text-slate-200">
                 💵 Cash on Delivery
               </span>
-              <span className="px-2.5 py-1 rounded-md bg-pink-950/40 border border-pink-700/60 text-[11px] font-bold text-pink-300">
+              <span className="px-2 sm:px-2.5 py-1 rounded-md bg-pink-950/40 border border-pink-700/60 text-[10px] sm:text-[11px] font-bold text-pink-300">
                 bKash: {settings.bkashNumber ? settings.bkashNumber.split(' ')[0] : '01800123456'}
               </span>
-              <span className="px-2.5 py-1 rounded-md bg-orange-950/40 border border-orange-700/60 text-[11px] font-bold text-orange-300">
+              <span className="px-2 sm:px-2.5 py-1 rounded-md bg-orange-950/40 border border-orange-700/60 text-[10px] sm:text-[11px] font-bold text-orange-300">
                 Nagad: {settings.nagadNumber ? settings.nagadNumber.split(' ')[0] : '01800123456'}
               </span>
-              <span className="px-2.5 py-1 rounded-md bg-purple-950/40 border border-purple-700/60 text-[11px] font-bold text-purple-300">
+              <span className="px-2 sm:px-2.5 py-1 rounded-md bg-purple-950/40 border border-purple-700/60 text-[10px] sm:text-[11px] font-bold text-purple-300">
                 Jihan Wallet
               </span>
             </div>
@@ -239,7 +239,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenAuth }) => {
             <div className="pt-4 border-t border-blue-900/50 flex flex-col gap-2">
               <button
                 onClick={onOpenAdmin}
-                className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950 font-bold transition flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950 font-bold transition flex items-center justify-center gap-1.5 text-xs shadow-sm"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>অ্যাডমিন কন্ট্রোল প্যানেল</span>
@@ -256,9 +256,9 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenAuth }) => {
         </div>
 
         {/* Bottom Copyright & Guarantee Badges */}
-        <div className="pt-8 border-t border-blue-900/60 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="pt-6 sm:pt-8 border-t border-blue-900/60 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4 text-xs text-slate-500 text-center md:text-left w-full">
           <p>© {new Date().getFullYear()} {settings.storeName}. সর্বস্বত্ব সংরক্ষিত। {settings.storeSlogan}</p>
-          <div className="flex items-center gap-4 text-[11px]">
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-2.5 sm:gap-4 text-[10px] sm:text-[11px]">
             <span>গোপনীয়তা নীতি (Privacy)</span>
             <span>•</span>
             <span>শর্তাবলী (Terms)</span>

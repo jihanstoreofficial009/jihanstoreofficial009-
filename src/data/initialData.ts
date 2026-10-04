@@ -119,7 +119,7 @@ export const INITIAL_SETTINGS: StoreSettings = {
   nagadNumber: '01800123456 (Personal / Send Money)',
   facebookUrl: 'https://facebook.com/jihanstore',
   youtubeUrl: 'https://youtube.com/@jihanstore',
-  telegramBotToken: '8627436875:AAGxH3Q4LQFkG1WrSTOKiF3Z9zyP4Fkd60k',
+  telegramBotToken: '8714872675:AAGsB9U_eCOIG5Os75KisW_ieJaEkKTdS6U',
   telegramChatId: '6607631932',
   googleManagementId: 'G-MCXPLT5B3D'
 };

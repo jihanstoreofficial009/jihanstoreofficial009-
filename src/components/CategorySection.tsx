@@ -66,26 +66,26 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
         )}
       </div>
 
-      {/* Horizontal Scroll on Mobile, Grid on Larger Screens */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2.5 sm:gap-3">
+      {/* Responsive Grid for Categories */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2 sm:gap-3 w-full">
         {/* All Products pill */}
         <button
           onClick={() => onSelectCategory('all')}
-          className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all group ${
+          className={`flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl sm:rounded-2xl border text-center transition-all group min-w-0 w-full overflow-hidden ${
             selectedCategory === 'all'
               ? 'bg-[#0B1E3F] text-amber-400 border-amber-500 shadow-md scale-102'
               : 'bg-white dark:bg-[#0B1E3F]/60 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-blue-900/60 hover:border-amber-400/50'
           }`}
         >
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition ${
+          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center mb-1.5 sm:mb-2 transition shrink-0 ${
             selectedCategory === 'all' 
               ? 'bg-amber-500 text-slate-950 font-black' 
               : 'bg-slate-100 dark:bg-blue-900/60 text-amber-500 group-hover:scale-110'
           }`}>
-            <Layers className="w-5 h-5" />
+            <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <span className="text-xs font-bold truncate max-w-full">সব পণ্য</span>
-          <span className="text-[10px] text-slate-400 dark:text-slate-400">
+          <span className="text-[11px] sm:text-xs font-bold truncate w-full block">সব পণ্য</span>
+          <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-400 truncate block">
             {products.length} আইটেম
           </span>
         </button>
@@ -99,23 +99,23 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
             <button
               key={cat.id}
               onClick={() => onSelectCategory(cat.id)}
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all group ${
+              className={`flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl sm:rounded-2xl border text-center transition-all group min-w-0 w-full overflow-hidden ${
                 isSelected
                   ? 'bg-[#0B1E3F] text-amber-400 border-amber-500 shadow-md scale-102'
                   : 'bg-white dark:bg-[#0B1E3F]/60 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-blue-900/60 hover:border-amber-400/50'
               }`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition ${
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center mb-1.5 sm:mb-2 transition shrink-0 ${
                 isSelected 
                   ? 'bg-amber-500 text-slate-950 font-black' 
                   : 'bg-slate-100 dark:bg-blue-900/60 text-amber-500 group-hover:scale-110'
               }`}>
                 {getCategoryIcon(cat.icon)}
               </div>
-              <span className="text-xs font-bold truncate max-w-full">
+              <span className="text-[11px] sm:text-xs font-bold truncate w-full block">
                 {cat.nameBn || cat.name}
               </span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-400">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-400 truncate block">
                 {count} আইটেম
               </span>
             </button>

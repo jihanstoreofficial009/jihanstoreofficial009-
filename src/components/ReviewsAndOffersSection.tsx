@@ -44,16 +44,16 @@ export const ReviewsAndOffersSection: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-12 py-6">
+    <div className="space-y-8 sm:space-y-12 py-4 sm:py-6 w-full max-w-full overflow-hidden">
       {/* Active Coupons Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-slate-950 p-6 sm:p-8 shadow-xl">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center md:text-left">
+      <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-slate-950 p-4 sm:p-8 shadow-xl max-w-full overflow-hidden">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6">
+          <div className="space-y-2 text-center md:text-left min-w-0">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950 text-amber-300 text-xs font-black uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               <span>ডিসকাউন্ট ভাউচার ও প্রমোশন</span>
             </div>
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-950 leading-tight">
+            <h3 className="text-xl sm:text-3xl font-black text-slate-950 leading-tight">
               অর্ডারে অতিরিক্ত ছাড় পেতে কুপন কোড ব্যবহার করুন!
             </h3>
             <p className="text-xs sm:text-sm font-semibold text-slate-900/80">
@@ -61,26 +61,26 @@ export const ReviewsAndOffersSection: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3 justify-center">
+          <div className="flex flex-wrap gap-2.5 sm:gap-3 justify-center w-full md:w-auto">
             {coupons.map((c) => (
               <button
                 key={c.code}
                 onClick={() => handleCopyCoupon(c.code)}
-                className="group relative p-3 rounded-2xl bg-white/95 backdrop-blur-md border-2 border-dashed border-amber-800/40 hover:border-slate-950 transition flex items-center gap-3 shadow-md hover:scale-105 active:scale-95"
+                className="group relative p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/95 backdrop-blur-md border-2 border-dashed border-amber-800/40 hover:border-slate-950 transition flex items-center justify-between gap-2.5 sm:gap-3 shadow-md hover:scale-105 active:scale-95 w-full sm:w-auto max-w-full min-w-0"
               >
-                <div className="text-left">
+                <div className="text-left min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-amber-600" />
-                    <span className="font-mono font-black text-sm tracking-wider text-slate-900">
+                    <Tag className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span className="font-mono font-black text-sm tracking-wider text-slate-900 truncate">
                       {c.code}
                     </span>
                   </div>
-                  <span className="text-[11px] font-bold text-emerald-700 block mt-0.5">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 block mt-0.5 truncate">
                     {c.discountType === 'percentage' ? `${c.discountValue}% ছাড়` : `৳${c.discountValue} ছাড়`} (মিনিমাম ৳{c.minOrder})
                   </span>
                 </div>
 
-                <div className="w-7 h-7 rounded-lg bg-amber-100 group-hover:bg-amber-500 group-hover:text-slate-950 flex items-center justify-center transition">
+                <div className="w-7 h-7 rounded-lg bg-amber-100 group-hover:bg-amber-500 group-hover:text-slate-950 flex items-center justify-center transition shrink-0">
                   {copiedCode === c.code ? (
                     <Check className="w-4 h-4 text-emerald-600" />
                   ) : (

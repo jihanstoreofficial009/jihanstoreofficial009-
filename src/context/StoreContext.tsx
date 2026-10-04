@@ -386,8 +386,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data() as StoreSettings;
+          // Auto-migrate to user's telegram credentials if missing or old
+          if (!data.telegramBotToken || data.telegramBotToken === '8627436875:AAGxH3Q4LQFkG1WrSTOKiF3Z9zyP4Fkd60k') {
+            data.telegramBotToken = '8714872675:AAGsB9U_eCOIG5Os75KisW_ieJaEkKTdS6U';
+            data.telegramChatId = '6607631932';
+            setDoc(setDocRef, { telegramBotToken: data.telegramBotToken, telegramChatId: data.telegramChatId }, { merge: true }).catch(() => {});
+          }
           setSettings(data);
           localStorage.setItem('jihan_settings_cache', JSON.stringify(data));
+        } else {
+          setDoc(setDocRef, INITIAL_SETTINGS, { merge: true }).catch(() => {});
         }
       },
       (error) => {
@@ -438,6 +446,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           localStorage.setItem('jihan_ads_cache', JSON.stringify(list));
         } else {
           setAds(INITIAL_ADS);
+          // Initialize default ads so documents exist in Firestore
+          INITIAL_ADS.forEach(async (a) => {
+            try {
+              await setDoc(doc(db, 'ads', a.id), a, { merge: true });
+            } catch {
+              // Ignore background seed
+            }
+          });
         }
       },
       (error) => {
@@ -1299,12 +1315,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const recordAdClick = async (adId: string) => {
     try {
       const adRef = doc(db, 'ads', adId);
-      const snap = await getDoc(adRef);
-      if (snap.exists()) {
-        await updateDoc(adRef, {
-          clicks: increment(1)
-        });
-      }
+      const defaultAd = INITIAL_ADS.find(a => a.id === adId);
+      await setDoc(adRef, {
+        ...(defaultAd ? { ...defaultAd } : {}),
+        clicks: increment(1),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
     } catch {
       // Non-blocking
     }
@@ -1313,12 +1329,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const recordAdView = async (adId: string) => {
     try {
       const adRef = doc(db, 'ads', adId);
-      const snap = await getDoc(adRef);
-      if (snap.exists()) {
-        await updateDoc(adRef, {
-          views: increment(1)
-        });
-      }
+      const defaultAd = INITIAL_ADS.find(a => a.id === adId);
+      await setDoc(adRef, {
+        ...(defaultAd ? { ...defaultAd } : {}),
+        views: increment(1),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
     } catch {
       // Non-blocking
     }

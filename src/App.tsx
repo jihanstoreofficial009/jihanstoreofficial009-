@@ -129,7 +129,7 @@ const MainStoreContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#07162E] text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#07162E] text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950 w-full max-w-full overflow-x-hidden">
       {/* Navbar */}
       <Navbar
         onOpenCart={() => setIsCartOpen(true)}
@@ -144,7 +144,7 @@ const MainStoreContent: React.FC = () => {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-8 sm:space-y-12 overflow-x-hidden">
         {/* Hero Section */}
         {selectedCategory === 'all' && !searchQuery && (
           <>
@@ -178,11 +178,11 @@ const MainStoreContent: React.FC = () => {
         <AdBanner placement="home_middle" />
 
         {/* Products Listing Section */}
-        <section id="products-section" className="space-y-6 pt-4">
+        <section id="products-section" className="space-y-4 sm:space-y-6 pt-2 sm:pt-4 w-full">
           {/* Section Header & Filters */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-blue-900/60">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-slate-200 dark:border-blue-900/60 w-full">
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>
                   {selectedCategory === 'all' 
                     ? 'আমাদের জনপ্রিয় পণ্যসমূহ' 
@@ -200,14 +200,14 @@ const MainStoreContent: React.FC = () => {
             </div>
 
             {/* Sorting & Filter Controls */}
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <div className="flex items-center gap-1.5 bg-white dark:bg-[#0B1E3F] border border-slate-200 dark:border-blue-800 rounded-xl px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+              <div className="flex items-center gap-1.5 bg-white dark:bg-[#0B1E3F] border border-slate-200 dark:border-blue-800 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2">
                 <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-slate-400 font-medium">সর্ট:</span>
                 <select
                   value={sortBy}
                   onChange={(e: any) => setSortBy(e.target.value)}
-                  className="bg-transparent text-slate-800 dark:text-slate-200 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-800 dark:text-slate-200 font-bold focus:outline-none cursor-pointer text-xs"
                 >
                   <option value="featured" className="dark:bg-[#0B1E3F]">ফিচার্ড (Featured)</option>
                   <option value="price-asc" className="dark:bg-[#0B1E3F]">দাম: কম থেকে বেশি</option>
@@ -219,7 +219,7 @@ const MainStoreContent: React.FC = () => {
               {selectedCategory !== 'all' && (
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-blue-900/50 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-300 transition"
+                  className="px-3 py-1.5 sm:py-2 rounded-xl bg-slate-200 dark:bg-blue-900/50 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-300 transition text-xs"
                 >
                   ফিল্টার ক্লিয়ার
                 </button>
@@ -229,7 +229,7 @@ const MainStoreContent: React.FC = () => {
 
           {/* Product Grid */}
           {filteredProducts.length === 0 ? (
-            <div className="text-center py-16 space-y-4">
+            <div className="text-center py-12 sm:py-16 space-y-4">
               <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-blue-950/60 flex items-center justify-center text-slate-400 mx-auto">
                 <Search className="w-8 h-8" />
               </div>
@@ -250,7 +250,7 @@ const MainStoreContent: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6 w-full">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -264,7 +264,7 @@ const MainStoreContent: React.FC = () => {
         </section>
 
         {/* Offers & Customer Reviews Section */}
-        <section id="offers-section">
+        <section id="offers-section" className="w-full">
           <ReviewsAndOffersSection />
         </section>
 
@@ -272,12 +272,12 @@ const MainStoreContent: React.FC = () => {
         <AdBanner placement="home_bottom" />
 
         {/* Contact Section */}
-        <section className="rounded-3xl bg-white dark:bg-[#0B1E3F]/80 border border-slate-200 dark:border-blue-900/60 p-6 sm:p-10 shadow-sm space-y-6">
+        <section className="rounded-2xl sm:rounded-3xl bg-white dark:bg-[#0B1E3F]/80 border border-slate-200 dark:border-blue-900/60 p-4 sm:p-10 shadow-sm space-y-5 sm:space-y-6 overflow-hidden w-full max-w-full">
           <div className="text-center max-w-xl mx-auto space-y-1">
             <span className="text-xs font-bold text-amber-500 uppercase tracking-widest block">
               সাহায্য ও যোগাযোগ
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white">
               আমাদের সাথে সরাসরি কথা বলুন
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
@@ -285,18 +285,18 @@ const MainStoreContent: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
             <a
               href={`tel:${settings.phone}`}
-              className="p-5 rounded-2xl bg-slate-50 dark:bg-blue-950/40 border border-slate-200 dark:border-blue-900/40 flex items-center gap-4 hover:border-amber-400/50 transition group"
+              className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-blue-950/40 border border-slate-200 dark:border-blue-900/40 flex items-center gap-3 sm:gap-4 hover:border-amber-400/50 transition group min-w-0"
             >
-              <div className="w-12 h-12 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-                <Phone className="w-6 h-6" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
+                <Phone className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <h4 className="text-xs text-slate-400 font-medium">হটলাইন ও অর্ডার কল</h4>
-                <span className="text-sm font-bold text-slate-900 dark:text-white block mt-0.5">{settings.phone}</span>
-                <span className="text-[10px] text-emerald-600 font-semibold">সকাল ৯টা - রাত ১১টা</span>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs text-slate-400 font-medium truncate">হটলাইন ও অর্ডার কল</h4>
+                <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block mt-0.5 truncate">{settings.phone}</span>
+                <span className="text-[10px] text-emerald-600 font-semibold block truncate">সকাল ৯টা - রাত ১১টা</span>
               </div>
             </a>
 
@@ -304,29 +304,29 @@ const MainStoreContent: React.FC = () => {
               href={`https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}`}
               target="_blank"
               rel="noreferrer"
-              className="p-5 rounded-2xl bg-slate-50 dark:bg-blue-950/40 border border-slate-200 dark:border-blue-900/40 flex items-center gap-4 hover:border-emerald-400/50 transition group"
+              className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-blue-950/40 border border-slate-200 dark:border-blue-900/40 flex items-center gap-3 sm:gap-4 hover:border-emerald-400/50 transition group min-w-0"
             >
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-                <MessageCircle className="w-6 h-6" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
+                <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <h4 className="text-xs text-slate-400 font-medium">হোয়াটসঅ্যাপ চ্যাট</h4>
-                <span className="text-sm font-bold text-slate-900 dark:text-white block mt-0.5">{settings.whatsapp}</span>
-                <span className="text-[10px] text-emerald-600 font-semibold">তাৎক্ষণিক উত্তর</span>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs text-slate-400 font-medium truncate">হোয়াটসঅ্যাপ চ্যাট</h4>
+                <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block mt-0.5 truncate">{settings.whatsapp}</span>
+                <span className="text-[10px] text-emerald-600 font-semibold block truncate">তাৎক্ষণিক উত্তর</span>
               </div>
             </a>
 
             <a
               href={`mailto:${settings.email}`}
-              className="p-5 rounded-2xl bg-slate-50 dark:bg-blue-950/40 border border-slate-200 dark:border-blue-900/40 flex items-center gap-4 hover:border-blue-400/50 transition group"
+              className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-blue-950/40 border border-slate-200 dark:border-blue-900/40 flex items-center gap-3 sm:gap-4 hover:border-blue-400/50 transition group min-w-0"
             >
-              <div className="w-12 h-12 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-                <Mail className="w-6 h-6" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
+                <Mail className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <h4 className="text-xs text-slate-400 font-medium">অফিশিয়াল ইমেইল</h4>
-                <span className="text-sm font-bold text-slate-900 dark:text-white block mt-0.5 truncate max-w-[180px]">{settings.email}</span>
-                <span className="text-[10px] text-slate-400 font-semibold">২৪ ঘণ্টার মধ্যে ফিডব্যাক</span>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs text-slate-400 font-medium truncate">অফিশিয়াল ইমেইল</h4>
+                <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block mt-0.5 truncate">{settings.email}</span>
+                <span className="text-[10px] text-slate-400 font-semibold block truncate">২৪ ঘণ্টার মধ্যে ফিডব্যাক</span>
               </div>
             </a>
           </div>
