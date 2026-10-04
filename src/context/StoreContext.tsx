@@ -25,7 +25,8 @@ import {
   onSnapshot,
   handleFirestoreError,
   OperationType,
-  increment
+  increment,
+  deleteStorageFile
 } from '../lib/firebase';
 import { 
   Product, 
@@ -321,7 +322,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               for (const ad of INITIAL_ADS) {
                 setDoc(doc(db, 'ads', ad.id), ad, { merge: true }).catch(() => {});
               }
+              // Ensure admin authorization record exists in Firestore
+              setDoc(doc(db, 'admins', currentUser.uid), {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                role: 'admin',
+                updatedAt: new Date().toISOString()
+              }, { merge: true }).catch(() => {});
             }
+          }
+          if (currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+            setDoc(doc(db, 'admins', currentUser.uid), {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              role: 'admin',
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(() => {});
           }
         } catch (err) {
           console.warn('Could not sync user profile with Firestore:', err);
@@ -1020,6 +1036,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       await setDoc(doc(db, 'products', id), payload, { merge: true });
+      setProducts(prev => {
+        const idx = prev.findIndex(p => p.id === id);
+        if (idx >= 0) {
+          const list = [...prev];
+          list[idx] = payload;
+          return list;
+        }
+        return [payload, ...prev];
+      });
       addToast('পণ্য সফলভাবে সেভ করা হয়েছে!', 'success');
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `products/${id}`);
@@ -1028,7 +1053,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteProduct = async (productId: string) => {
     try {
+      const prod = products.find(p => p.id === productId);
+      if (prod?.image) {
+        deleteStorageFile(prod.image).catch(() => {});
+      }
+      if (prod?.images) {
+        prod.images.forEach(img => deleteStorageFile(img).catch(() => {}));
+      }
       await deleteDoc(doc(db, 'products', productId));
+      setProducts(prev => prev.filter(p => p.id !== productId));
       addToast('পণ্যটি সফলভাবে ডিলিট করা হয়েছে', 'info');
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `products/${productId}`);
@@ -1047,6 +1080,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     try {
       await setDoc(doc(db, 'categories', id), payload, { merge: true });
+      setCategories(prev => {
+        const idx = prev.findIndex(c => c.id === id);
+        if (idx >= 0) {
+          const list = [...prev];
+          list[idx] = payload;
+          return list;
+        }
+        return [...prev, payload];
+      });
       addToast('ক্যাটাগরি সেভ হয়েছে!', 'success');
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `categories/${id}`);
@@ -1055,7 +1097,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteCategory = async (categoryId: string) => {
     try {
+      const cat = categories.find(c => c.id === categoryId);
+      if (cat?.image) {
+        deleteStorageFile(cat.image).catch(() => {});
+      }
       await deleteDoc(doc(db, 'categories', categoryId));
+      setCategories(prev => prev.filter(c => c.id !== categoryId));
       addToast('ক্যাটাগরি ডিলিট হয়েছে', 'info');
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `categories/${categoryId}`);
@@ -1164,6 +1211,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (list.length <= 1) {
       addToast('কমপক্ষে একটি লোগো থাকা বাধ্যতামূলক', 'error');
       return;
+    }
+    const targetLogo = list.find(l => l.id === logoId);
+    if (targetLogo?.url) {
+      deleteStorageFile(targetLogo.url).catch(() => {});
     }
     const filtered = list.filter(l => l.id !== logoId);
     const newActiveId = settings.activeLogoId === logoId ? filtered[0].id : settings.activeLogoId;
@@ -1291,7 +1342,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteAd = async (adId: string) => {
     try {
+      const targetAd = ads.find(a => a.id === adId);
+      if (targetAd?.image) {
+        deleteStorageFile(targetAd.image).catch(() => {});
+      }
       await deleteDoc(doc(db, 'ads', adId));
+      setAds(prev => prev.filter(a => a.id !== adId));
       addToast('বিজ্ঞাপনটি মুছে ফেলা হয়েছে', 'info');
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `ads/${adId}`);

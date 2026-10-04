@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { 
   X, 
@@ -27,9 +27,12 @@ import {
   Bot,
   Send,
   CheckCircle2,
-  Crown
+  Crown,
+  Upload,
+  FileImage
 } from 'lucide-react';
 import { Product, Category, Order, OrderStatus, WalletTransaction, Coupon, StoreSettings } from '../types/store';
+import { uploadImageFile, deleteStorageFile } from '../lib/firebase';
 import { AdminLogosManager } from './admin/AdminLogosManager';
 import { AdminAdsManager } from './admin/AdminAdsManager';
 import { AdminContentManager } from './admin/AdminContentManager';
@@ -77,10 +80,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Product Modal Form State
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
+  const [productError, setProductError] = useState<string | null>(null);
 
   // Category Modal Form State
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [isUploadingCategoryImage, setIsUploadingCategoryImage] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   // Coupon Modal Form State
   const [showCouponModal, setShowCouponModal] = useState(false);
@@ -93,8 +102,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
   const [orderSearch, setOrderSearch] = useState<string>('');
 
-  // Settings State
+  // Settings State synced with Firestore
   const [settingsForm, setSettingsForm] = useState<StoreSettings>(settings);
+
+  useEffect(() => {
+    setSettingsForm(settings);
+  }, [settings]);
 
   // Product Search
   const [productSearch, setProductSearch] = useState('');
@@ -113,18 +126,90 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
-    await saveProduct(editingProduct);
-    setShowProductModal(false);
-    setEditingProduct(null);
+    setIsSavingProduct(true);
+    setProductError(null);
+    try {
+      await saveProduct(editingProduct);
+      setShowProductModal(false);
+      setEditingProduct(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setProductError(`পণ্য সংরক্ষণ ব্যর্থ: ${msg}`);
+      addToast(`পণ্য সংরক্ষণ ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
+
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      addToast('অনুগ্রহ করে একটি ছবি ফাইল আপলোড করুন (JPG, PNG, WebP)', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('ছবির সাইজ ৫MB এর কম হতে হবে', 'error');
+      return;
+    }
+
+    setIsUploadingProductImage(true);
+    setProductError(null);
+    try {
+      const downloadUrl = await uploadImageFile(file, 'products');
+      setEditingProduct(prev => prev ? {
+        ...prev,
+        image: downloadUrl,
+        images: prev.images ? [...prev.images, downloadUrl] : [downloadUrl]
+      } : null);
+      addToast('পণ্যের ছবি ক্লাউড স্টোরেজে আপলোড হয়েছে!', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setProductError(`ছবি আপলোড ব্যর্থ: ${msg}`);
+      addToast(`ছবি আপলোড ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsUploadingProductImage(false);
+    }
   };
 
   // Handlers for Category Save
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCategory) return;
-    await saveCategory(editingCategory);
-    setShowCategoryModal(false);
-    setEditingCategory(null);
+    setIsSavingCategory(true);
+    setCategoryError(null);
+    try {
+      await saveCategory(editingCategory);
+      setShowCategoryModal(false);
+      setEditingCategory(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setCategoryError(`ক্যাটাগরি সংরক্ষণ ব্যর্থ: ${msg}`);
+      addToast(`ক্যাটাগরি সংরক্ষণ ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsSavingCategory(false);
+    }
+  };
+
+  const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingCategoryImage(true);
+    setCategoryError(null);
+    try {
+      const downloadUrl = await uploadImageFile(file, 'categories');
+      setEditingCategory(prev => prev ? { ...prev, image: downloadUrl } : null);
+      addToast('ক্যাটাগরি ছবি ক্লাউড স্টোরেজে আপলোড হয়েছে!', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setCategoryError(`ছবি আপলোড ব্যর্থ: ${msg}`);
+      addToast(`ছবি আপলোড ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsUploadingCategoryImage(false);
+    }
   };
 
   // Handlers for Coupon Save
@@ -687,9 +772,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => deleteProduct(p.id)}
-                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded"
-                              title="Delete"
+                              type="button"
+                              onClick={async () => {
+                                if (window.confirm(`আপনি কি "${p.titleBn || p.title}" পণ্যটি ডিলিট করতে চান?`)) {
+                                  try {
+                                    await deleteProduct(p.id);
+                                  } catch (err) {
+                                    const msg = err instanceof Error ? err.message : String(err);
+                                    addToast(`পণ্য ডিলিট ব্যর্থ: ${msg}`, 'error');
+                                  }
+                                }
+                              }}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition cursor-pointer"
+                              title="Delete Product"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -737,8 +832,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => deleteCategory(c.id)}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded"
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm(`আপনি কি "${c.nameBn || c.name}" ক্যাটাগরি ডিলিট করতে চান?`)) {
+                              try {
+                                await deleteCategory(c.id);
+                              } catch (err) {
+                                const msg = err instanceof Error ? err.message : String(err);
+                                addToast(`ক্যাটাগরি ডিলিট ব্যর্থ: ${msg}`, 'error');
+                              }
+                            }
+                          }}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition cursor-pointer"
                           title="Delete Category"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -980,19 +1085,63 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold block mb-1">ছবির URL</label>
-                <input
-                  type="url"
-                  required
-                  value={editingProduct.image || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800"
-                />
+              {/* Product Image Upload with Firebase Storage */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+                <span className="font-bold text-amber-400 block text-xs flex items-center gap-1.5">
+                  <FileImage className="w-4 h-4" />
+                  <span>পণ্যের ছবি আপলোড (Product Image):</span>
+                </span>
+
+                <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                  <label className={`w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-xs ${
+                    isUploadingProductImage ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}>
+                    {isUploadingProductImage ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                        <span>স্টোরেজে আপলোড হচ্ছে...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>ডিভাইস থেকে ছবি আপলোড</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      disabled={isUploadingProductImage}
+                      accept="image/*"
+                      onChange={handleProductImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <span className="text-[10px] text-slate-400">JPG, PNG, WebP (Max 5MB)</span>
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1 text-[11px]">অথবা ছবির সরাসরি URL লিংক দিন:</label>
+                  <input
+                    type="url"
+                    placeholder="https://images.unsplash.com/..."
+                    value={editingProduct.image || ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-blue-950/80 border border-slate-200 dark:border-blue-800 text-xs font-mono"
+                  />
+                </div>
+
+                {editingProduct.image && (
+                  <div className="p-2 rounded-xl bg-slate-900/60 border border-amber-500/20 flex items-center gap-3">
+                    <img src={editingProduct.image} alt="Preview" className="w-12 h-12 rounded-lg object-cover bg-white/10" />
+                    <div>
+                      <span className="text-emerald-400 font-bold block text-[11px]">ছবি সংযুক্ত হয়েছে!</span>
+                      <span className="text-slate-400 text-[10px] truncate max-w-[200px] block font-mono">{editingProduct.image}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
-                <label className="font-bold block mb-1">ব্যাজ (যেমন: HOT, NEW)</label>
+                <label className="font-bold block mb-1">ব্যাজ (যেমন: HOT, NEW, 20% OFF)</label>
                 <input
                   type="text"
                   value={editingProduct.badge || ''}
@@ -1011,11 +1160,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
+              {productError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{productError}</span>
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400"
+                disabled={isSavingProduct || isUploadingProductImage}
+                className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                সংরক্ষণ করুন
+                {isSavingProduct ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                    <span>পণ্য সংরক্ষণ হচ্ছে...</span>
+                  </>
+                ) : (
+                  <span>সংরক্ষণ করুন</span>
+                )}
               </button>
             </form>
           </div>
@@ -1073,11 +1237,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <option value="Layers">Layers (অন্যান্য সকল পণ্য)</option>
                 </select>
               </div>
+
+              {/* Category Image upload */}
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                <span className="font-bold text-amber-400 block text-[11px] flex items-center gap-1.5">
+                  <FileImage className="w-3.5 h-3.5" />
+                  <span>ক্যাটাগরি ছবি (ঐচ্ছিক):</span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <label className={`px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] transition cursor-pointer flex items-center gap-1.5 ${
+                    isUploadingCategoryImage ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}>
+                    {isUploadingCategoryImage ? (
+                      <>
+                        <span className="w-3 h-3 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                        <span>আপলোড হচ্ছে...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3 h-3" />
+                        <span>ছবি আপলোড</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      disabled={isUploadingCategoryImage}
+                      accept="image/*"
+                      onChange={handleCategoryImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  {editingCategory.image && (
+                    <img src={editingCategory.image} alt="Cat preview" className="w-8 h-8 rounded-lg object-cover border border-amber-500/30" />
+                  )}
+                </div>
+              </div>
+
+              {categoryError && (
+                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[11px] flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{categoryError}</span>
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 cursor-pointer"
+                disabled={isSavingCategory || isUploadingCategoryImage}
+                className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                সংরক্ষণ করুন
+                {isSavingCategory ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                    <span>ক্যাটাগরি সংরক্ষণ হচ্ছে...</span>
+                  </>
+                ) : (
+                  <span>সংরক্ষণ করুন</span>
+                )}
               </button>
             </form>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { Advertisement, AdPlacement } from '../../types/store';
+import { uploadImageFile, deleteStorageFile } from '../../lib/firebase';
 import { 
   Megaphone, 
   Plus, 
@@ -21,7 +22,8 @@ import {
   Sparkles,
   Calendar,
   Building2,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 const PLACEMENT_LABELS: Record<AdPlacement, { label: string; labelBn: string; color: string }> = {
@@ -45,6 +47,9 @@ export const AdminAdsManager: React.FC = () => {
   const [selectedPlacement, setSelectedPlacement] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingAd, setEditingAd] = useState<Partial<Advertisement> | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Overall Stats
   const totalViews = ads.reduce((sum, a) => sum + (a.views || 0), 0);
@@ -58,33 +63,39 @@ export const AdminAdsManager: React.FC = () => {
     return a.placement === selectedPlacement;
   }).sort((a, b) => (a.displayOrder || 1) - (b.displayOrder || 1));
 
-  // Local File Upload for Ad Image
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Local File Upload for Ad Image to Firebase Storage
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      addToast('অনুগ্রহ করে একটি ছবি ফাইল আপলোড করুন', 'error');
+      addToast('অনুগ্রহ করে একটি ছবি ফাইল আপলোড করুন (JPG, PNG, WebP)', 'error');
       return;
     }
 
-    if (file.size > 3 * 1024 * 1024) {
-      addToast('ছবির সাইজ ৩MB এর কম হতে হবে', 'error');
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('ছবির সাইজ ৫MB এর কম হতে হবে', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result && editingAd) {
-        setEditingAd({
-          ...editingAd,
-          image: result
-        });
-        addToast('বিজ্ঞাপন ব্যানার ছবি লোড হয়েছে!', 'success');
+    setIsUploadingImage(true);
+    setErrorMessage(null);
+    try {
+      const downloadUrl = await uploadImageFile(file, 'ads');
+      if (editingAd) {
+        setEditingAd(prev => prev ? {
+          ...prev,
+          image: downloadUrl
+        } : null);
       }
-    };
-    reader.readAsDataURL(file);
+      addToast('বিজ্ঞাপন ব্যানার ছবি স্টোরেজে আপলোড হয়েছে!', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMessage(`ছবি আপলোড ব্যর্থ: ${msg}`);
+      addToast(`ছবি আপলোড ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -94,9 +105,19 @@ export const AdminAdsManager: React.FC = () => {
       return;
     }
 
-    await saveAd(editingAd);
-    setShowModal(false);
-    setEditingAd(null);
+    setIsSaving(true);
+    setErrorMessage(null);
+    try {
+      await saveAd(editingAd);
+      setShowModal(false);
+      setEditingAd(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMessage(`সংরক্ষণ ব্যর্থ: ${msg}`);
+      addToast(`বিজ্ঞাপন সংরক্ষণ ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReorder = async (ad: Advertisement, direction: 'up' | 'down') => {
@@ -507,11 +528,23 @@ export const AdminAdsManager: React.FC = () => {
                 </span>
 
                 <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <label className="w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-sm">
-                    <Upload className="w-4 h-4" />
-                    <span>ডিভাইস থেকে ছবি আপলোড</span>
+                  <label className={`w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-sm ${
+                    isUploadingImage ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}>
+                    {isUploadingImage ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                        <span>স্টোরেজে আপলোড হচ্ছে...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>ডিভাইস থেকে ছবি আপলোড</span>
+                      </>
+                    )}
                     <input
                       type="file"
+                      disabled={isUploadingImage}
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="hidden"
@@ -624,6 +657,13 @@ export const AdminAdsManager: React.FC = () => {
                 </span>
               </label>
 
+              {errorMessage && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
               {/* Buttons */}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-blue-800">
                 <button
@@ -635,9 +675,17 @@ export const AdminAdsManager: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl bg-amber-500 text-slate-950 font-black hover:bg-amber-400 shadow-md cursor-pointer"
+                  disabled={isSaving || isUploadingImage}
+                  className="px-6 py-2 rounded-xl bg-amber-500 text-slate-950 font-black hover:bg-amber-400 shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
-                  বিজ্ঞাপন সংরক্ষণ করুন
+                  {isSaving ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                      <span>সংরক্ষণ হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <span>বিজ্ঞাপন সংরক্ষণ করুন</span>
+                  )}
                 </button>
               </div>
             </form>

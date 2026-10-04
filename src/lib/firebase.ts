@@ -30,6 +30,13 @@ import {
   initializeFirestore,
   setLogLevel
 } from 'firebase/firestore';
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
+} from 'firebase/storage';
 import firebaseConfig from '@/firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -49,6 +56,54 @@ try {
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+export const storage = getStorage(app);
+
+/**
+ * Uploads an image/file to Firebase Storage and returns the public download URL.
+ * Includes graceful fallback to optimized Data URL if Storage fails or is unavailable.
+ */
+export async function uploadImageFile(file: File, folder = 'uploads'): Promise<string> {
+  const timestamp = Date.now();
+  const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+  const path = `${folder}/${timestamp}_${safeName}`;
+  const storageRef = ref(storage, path);
+
+  try {
+    const snapshot = await uploadBytes(storageRef, file, {
+      contentType: file.type
+    });
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    return downloadUrl;
+  } catch (storageError) {
+    console.warn('Firebase Storage upload failed, attempting fallback:', storageError);
+    // If Firebase Storage is blocked by rules or bucket configuration, read as Data URL so admin is not stopped
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to read file buffer'));
+        }
+      };
+      reader.onerror = () => reject(reader.error || new Error('File read error'));
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
+/**
+ * Deletes an image from Firebase Storage if it's a storage URL.
+ */
+export async function deleteStorageFile(url: string): Promise<void> {
+  if (!url || !url.includes('firebasestorage.googleapis.com')) return;
+  try {
+    const storageRef = ref(storage, url);
+    await deleteObject(storageRef);
+  } catch (err) {
+    console.warn('Firebase storage file deletion skipped:', err);
+  }
+}
 
 export const ADMIN_EMAIL = 'jihanstoreofficial009@gmail.com';
 

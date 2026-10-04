@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { StoreSettings, AddressItem, ContactNumber, EmailContact, SocialLinkItem } from '../../types/store';
 import { 
@@ -43,6 +43,13 @@ export const AdminContentManager: React.FC = () => {
 
   // General Store Settings State
   const [formSettings, setFormSettings] = useState<StoreSettings>(settings);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
+
+  // Sync with Firestore settings whenever they change or load
+  useEffect(() => {
+    setFormSettings(settings);
+  }, [settings]);
 
   // Address Modal State
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -68,8 +75,18 @@ export const AdminContentManager: React.FC = () => {
   // Handlers for General Settings Save
   const handleSaveGeneralSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateStoreSettings(formSettings);
-    addToast('স্টোর সেটিংস সফলভাবে আপডেট হয়েছে!', 'success');
+    setIsSavingSettings(true);
+    setGeneralError(null);
+    try {
+      await updateStoreSettings(formSettings);
+      addToast('স্টোর সেটিংস সফলভাবে আপডেট হয়েছে!', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setGeneralError(msg);
+      addToast(`স্টোর সেটিংস সংরক্ষণ ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   // Handlers for Address Save
@@ -337,12 +354,27 @@ export const AdminContentManager: React.FC = () => {
             </div>
           </div>
 
+          {generalError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{generalError}</span>
+            </div>
+          )}
+
           <div className="pt-2">
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black hover:bg-amber-400 transition shadow-md cursor-pointer"
+              disabled={isSavingSettings}
+              className="px-6 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black hover:bg-amber-400 transition shadow-md cursor-pointer disabled:opacity-60 flex items-center gap-2"
             >
-              স্টোর সেটিংস সংরক্ষণ করুন
+              {isSavingSettings ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                  <span>সংরক্ষণ করা হচ্ছে...</span>
+                </>
+              ) : (
+                <span>স্টোর সেটিংস সংরক্ষণ করুন</span>
+              )}
             </button>
           </div>
         </form>
@@ -800,17 +832,33 @@ export const AdminContentManager: React.FC = () => {
 
           <button
             type="button"
+            disabled={isSavingSettings}
             onClick={async () => {
-              await updateStoreSettings({
-                telegramBotToken: formSettings.telegramBotToken,
-                telegramChatId: formSettings.telegramChatId,
-                googleManagementId: formSettings.googleManagementId
-              });
-              addToast('টেলিগ্রাম ও গুগল আইডি সংরক্ষিত হয়েছে!', 'success');
+              setIsSavingSettings(true);
+              try {
+                await updateStoreSettings({
+                  telegramBotToken: formSettings.telegramBotToken,
+                  telegramChatId: formSettings.telegramChatId,
+                  googleManagementId: formSettings.googleManagementId
+                });
+                addToast('টেলিগ্রাম ও গুগল আইডি সফলভাবে সংরক্ষিত হয়েছে!', 'success');
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                addToast(`সংরক্ষণ ব্যর্থ: ${msg}`, 'error');
+              } finally {
+                setIsSavingSettings(false);
+              }
             }}
-            className="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition"
+            className="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition cursor-pointer disabled:opacity-60 flex items-center gap-2"
           >
-            টেলিগ্রাম ক্রেডেনশিয়াল সংরক্ষণ করুন
+            {isSavingSettings ? (
+              <>
+                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                <span>সংরক্ষণ করা হচ্ছে...</span>
+              </>
+            ) : (
+              <span>টেলিগ্রাম ক্রেডেনশিয়াল সংরক্ষণ করুন</span>
+            )}
           </button>
         </div>
       )}

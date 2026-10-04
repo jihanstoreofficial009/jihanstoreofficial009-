@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { LogoConfig } from '../../types/store';
+import { uploadImageFile, deleteStorageFile } from '../../lib/firebase';
 import { 
   Check, 
   Upload, 
@@ -15,7 +16,8 @@ import {
   CheckCircle2, 
   X,
   FileImage,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 export const AdminLogosManager: React.FC = () => {
@@ -33,9 +35,12 @@ export const AdminLogosManager: React.FC = () => {
   const [editingLogo, setEditingLogo] = useState<Partial<LogoConfig> | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [previewBg, setPreviewBg] = useState<'dark' | 'light'>('dark');
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Handle local file upload converting to base64 Data URL
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle local file upload with Firebase Storage
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -44,45 +49,61 @@ export const AdminLogosManager: React.FC = () => {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      addToast('ছবির সাইজ ২MB এর কম হতে হবে', 'error');
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('ছবির সাইজ ৫MB এর কম হতে হবে', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result && editingLogo) {
-        setEditingLogo({
-          ...editingLogo,
+    setIsUploading(true);
+    setErrorMessage(null);
+    try {
+      const downloadUrl = await uploadImageFile(file, 'logos');
+      if (editingLogo) {
+        setEditingLogo(prev => prev ? {
+          ...prev,
           type: 'custom',
-          url: result
-        });
-        addToast('লোগো ছবি লোড হয়েছে! সংরক্ষণ বাটনে ক্লিক করুন।', 'success');
+          url: downloadUrl
+        } : null);
       }
-    };
-    reader.readAsDataURL(file);
+      addToast('লোগো ছবি ক্লাউড স্টোরেজে আপলোড হয়েছে! সংরক্ষণ বাটনে ক্লিক করুন।', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMessage(`লোগো আপলোড ব্যর্থ: ${msg}`);
+      addToast(`লোগো আপলোড ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingLogo || !editingLogo.name) return;
 
-    const id = editingLogo.id || 'logo-' + Date.now().toString().slice(-4);
-    const logoToSave: LogoConfig = {
-      id,
-      name: editingLogo.name,
-      nameBn: editingLogo.nameBn || editingLogo.name,
-      type: editingLogo.type || 'custom',
-      url: editingLogo.url || '',
-      tagline: editingLogo.tagline || 'Online Shopping with Trust',
-      taglineBn: editingLogo.taglineBn || 'বিশ্বাসের সাথে অনলাইন শপিং',
-      isActive: editingLogo.isActive ?? false
-    };
+    setIsSaving(true);
+    setErrorMessage(null);
+    try {
+      const id = editingLogo.id || 'logo-' + Date.now().toString().slice(-4);
+      const logoToSave: LogoConfig = {
+        id,
+        name: editingLogo.name,
+        nameBn: editingLogo.nameBn || editingLogo.name,
+        type: editingLogo.type || 'custom',
+        url: editingLogo.url || '',
+        tagline: editingLogo.tagline || 'Online Shopping with Trust',
+        taglineBn: editingLogo.taglineBn || 'বিশ্বাসের সাথে অনলাইন শপিং',
+        isActive: editingLogo.isActive ?? false
+      };
 
-    await saveLogo(logoToSave);
-    setShowModal(false);
-    setEditingLogo(null);
+      await saveLogo(logoToSave);
+      setShowModal(false);
+      setEditingLogo(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMessage(`সংরক্ষণ ব্যর্থ: ${msg}`);
+      addToast(`লোগো সংরক্ষণ ব্যর্থ: ${msg}`, 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSetPrimary = async (logoId: string) => {
@@ -387,17 +408,29 @@ export const AdminLogosManager: React.FC = () => {
                 </span>
 
                 <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <label className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-sm">
-                    <FileImage className="w-4 h-4" />
-                    <span>ফাইল বেছে নিন (Upload Image)</span>
+                  <label className={`w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-sm ${
+                    isUploading ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}>
+                    {isUploading ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                        <span>ক্লাউড স্টোরেজে আপলোড হচ্ছে...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileImage className="w-4 h-4" />
+                        <span>ফাইল বেছে নিন (Upload to Storage)</span>
+                      </>
+                    )}
                     <input
                       type="file"
+                      disabled={isUploading}
                       accept="image/*"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
                   </label>
-                  <span className="text-[11px] text-slate-400">PNG, SVG, JPG বা WebP ফরম্যাট</span>
+                  <span className="text-[11px] text-slate-400">PNG, SVG, JPG বা WebP ফরম্যাট (Max 5MB)</span>
                 </div>
 
                 <div className="pt-2">
@@ -454,6 +487,13 @@ export const AdminLogosManager: React.FC = () => {
                 </span>
               </label>
 
+              {errorMessage && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
               {/* Buttons */}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-blue-800">
                 <button
@@ -465,9 +505,17 @@ export const AdminLogosManager: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-black hover:bg-amber-400 shadow-md cursor-pointer"
+                  disabled={isSaving || isUploading}
+                  className="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-black hover:bg-amber-400 shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
-                  সংরক্ষণ করুন
+                  {isSaving ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                      <span>সংরক্ষণ হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <span>সংরক্ষণ করুন</span>
+                  )}
                 </button>
               </div>
             </form>
