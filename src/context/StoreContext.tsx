@@ -44,7 +44,9 @@ import {
   AddressItem,
   ContactNumber,
   SocialLinkItem,
-  EmailContact
+  EmailContact,
+  TelegramBotConfig,
+  PaymentAccount
 } from '../types/store';
 import { 
   INITIAL_PRODUCTS, 
@@ -58,7 +60,9 @@ import {
   INITIAL_PHONES,
   INITIAL_WHATSAPPS,
   INITIAL_EMAILS,
-  INITIAL_SOCIAL_LINKS
+  INITIAL_SOCIAL_LINKS,
+  INITIAL_TELEGRAM_BOTS,
+  INITIAL_PAYMENT_ACCOUNTS
 } from '../data/initialData';
 import {
   notifyNewOrder,
@@ -66,7 +70,8 @@ import {
   notifyWalletDepositRequest,
   notifyWalletWithdrawRequest,
   notifyNewReview,
-  testTelegramConnection
+  testTelegramConnection,
+  sendTelegramMessage
 } from '../lib/telegram';
 
 export interface Toast {
@@ -150,8 +155,24 @@ interface StoreContextType {
   deleteCoupon: (code: string) => Promise<void>;
   updateStoreSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
   seedInitialDataToFirestore: () => Promise<void>;
-  addReview: (review: { productId?: string; rating: number; comment: string }) => Promise<void>;
+  addReview: (review: { productId?: string; productTitle?: string; userName?: string; photoUrl?: string; rating: number; comment: string }) => Promise<void>;
+  updateReviewStatus: (reviewId: string, status: 'pending' | 'approved' | 'hidden') => Promise<void>;
+  editReview: (review: Review) => Promise<void>;
+  deleteReview: (reviewId: string) => Promise<void>;
   sendTelegramTestNotification: (token?: string, chatId?: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Telegram Multi-Bot & Round-Robin Routing
+  saveTelegramBot: (bot: TelegramBotConfig) => Promise<void>;
+  deleteTelegramBot: (botId: string) => Promise<void>;
+  toggleTelegramBot: (botId: string, isEnabled: boolean) => Promise<void>;
+  testTelegramBot: (botId: string, customMessage?: string) => Promise<{ success: boolean; error?: string }>;
+  dispatchOrderNotification: (order: Order) => Promise<void>;
+
+  // Dynamic Payment Accounts
+  savePaymentAccount: (account: PaymentAccount) => Promise<void>;
+  deletePaymentAccount: (accountId: string) => Promise<void>;
+  togglePaymentAccount: (accountId: string, isEnabled: boolean) => Promise<void>;
+  reorderPaymentAccounts: (accountId: string, direction: 'up' | 'down') => Promise<void>;
 
   // Dynamic Branding & Logo Manager
   setActiveLogo: (logoId: string) => Promise<void>;
@@ -843,9 +864,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       clearCart();
       addToast(`অর্ডার #${orderId} সফলভাবে গ্রহন করা হয়েছে!`, 'success');
 
-      // Trigger instant Telegram Bot notification to admin
-      notifyNewOrder(orderData, settings.telegramBotToken, settings.telegramChatId).catch(err => {
-        console.warn('Telegram notification failed:', err);
+      // Trigger instant Round-Robin Telegram notification to admin bots
+      dispatchOrderNotification(orderData).catch(err => {
+        console.warn('Telegram round-robin dispatch failed:', err);
       });
 
       return orderId;
@@ -856,9 +877,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       clearCart();
       addToast(`অর্ডার #${orderId} সফলভাবে সাবমিট হয়েছে!`, 'success');
 
-      // Trigger instant Telegram Bot notification to admin
-      notifyNewOrder(orderData, settings.telegramBotToken, settings.telegramChatId).catch(err => {
-        console.warn('Telegram notification failed:', err);
+      // Trigger instant Round-Robin Telegram notification to admin bots
+      dispatchOrderNotification(orderData).catch(err => {
+        console.warn('Telegram round-robin dispatch failed:', err);
       });
 
       return orderId;
@@ -1137,43 +1158,222 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const addReview = async (rev: { productId?: string; rating: number; comment: string }) => {
+  const addReview = async (rev: { 
+    productId?: string; 
+    productTitle?: string; 
+    userName?: string; 
+    photoUrl?: string; 
+    rating: number; 
+    comment: string 
+  }) => {
     const revId = 'REV-' + Date.now().toString().slice(-6);
+    const prod = products.find(p => p.id === rev.productId);
     const newRev: Review = {
       id: revId,
       productId: rev.productId || '',
-      userId: user?.uid || 'guest',
-      userName: userProfile?.displayName || user?.displayName || 'Customer',
+      productTitle: rev.productTitle || prod?.titleBn || prod?.title,
+      userId: user?.uid || 'guest-' + Date.now(),
+      userName: rev.userName || userProfile?.displayName || user?.displayName || 'কাস্টমার',
+      photoUrl: rev.photoUrl || user?.photoURL || undefined,
       rating: rev.rating,
       comment: rev.comment,
+      status: 'pending', // Pending -> Approve -> Published flow
       isVerifiedPurchase: true,
       createdAt: new Date().toISOString()
     };
     try {
       await setDoc(doc(db, 'reviews', revId), newRev);
-      addToast('রিভিউ যোগ করার জন্য ধন্যবাদ!', 'success');
+      setReviews(prev => [newRev, ...prev]);
+      addToast('রিভিউ সফলভাবে জমা হয়েছে! অ্যাডমিন যাচাইয়ের পর প্রকাশিত হবে।', 'success');
 
-      // Trigger Telegram notification
-      const prod = products.find(p => p.id === rev.productId);
       notifyNewReview({
         userName: newRev.userName,
         rating: newRev.rating,
         comment: newRev.comment,
-        productTitle: prod?.titleBn || prod?.title
+        productTitle: newRev.productTitle
       }, settings.telegramBotToken, settings.telegramChatId).catch(() => {});
     } catch (err) {
-      // Local fallback
       setReviews(prev => [newRev, ...prev]);
-      addToast('রিভিউ সফলভাবে জমা হয়েছে!', 'success');
-
-      const prod = products.find(p => p.id === rev.productId);
-      notifyNewReview({
-        userName: newRev.userName,
-        rating: newRev.rating,
-        comment: newRev.comment,
-        productTitle: prod?.titleBn || prod?.title
-      }, settings.telegramBotToken, settings.telegramChatId).catch(() => {});
+      addToast('রিভিউ সফলভাবে জমা হয়েছে! অ্যাডমিন যাচাইয়ের পর প্রকাশিত হবে।', 'success');
     }
+  };
+
+  const updateReviewStatus = async (reviewId: string, status: 'pending' | 'approved' | 'hidden') => {
+    try {
+      const revRef = doc(db, 'reviews', reviewId);
+      await updateDoc(revRef, { status, updatedAt: new Date().toISOString() });
+      setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, status, updatedAt: new Date().toISOString() } : r));
+      addToast(status === 'approved' ? 'রিভিউটি অনুমোদিত ও প্রকাশিত হয়েছে!' : status === 'hidden' ? 'রিভিউটি লুকানো হয়েছে' : 'রিভিউ স্ট্যাটাস আপডেট হয়েছে', 'success');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `reviews/${reviewId}`);
+    }
+  };
+
+  const editReview = async (review: Review) => {
+    try {
+      const revRef = doc(db, 'reviews', review.id);
+      await setDoc(revRef, review, { merge: true });
+      setReviews(prev => prev.map(r => r.id === review.id ? review : r));
+      addToast('রিভিউ সফলভাবে আপডেট করা হয়েছে!', 'success');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `reviews/${review.id}`);
+    }
+  };
+
+  const deleteReview = async (reviewId: string) => {
+    try {
+      await deleteDoc(doc(db, 'reviews', reviewId));
+      setReviews(prev => prev.filter(r => r.id !== reviewId));
+      addToast('রিভিউটি সফলভাবে মুছে ফেলা হয়েছে', 'info');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `reviews/${reviewId}`);
+    }
+  };
+
+  // Telegram Multi-Bot & Round-Robin Routing Manager
+  const saveTelegramBot = async (bot: TelegramBotConfig) => {
+    const currentBots = settings.telegramBots && settings.telegramBots.length > 0 
+      ? settings.telegramBots 
+      : INITIAL_TELEGRAM_BOTS;
+    
+    const exists = currentBots.some(b => b.id === bot.id);
+    const updated = exists 
+      ? currentBots.map(b => b.id === bot.id ? bot : b)
+      : [...currentBots, bot];
+    
+    await updateStoreSettings({
+      telegramBots: updated,
+      telegramBotToken: bot.botToken,
+      telegramChatId: bot.chatId
+    });
+    addToast(`বট "${bot.botName}" সফলভাবে সেভ করা হয়েছে!`, 'success');
+  };
+
+  const deleteTelegramBot = async (botId: string) => {
+    const currentBots = settings.telegramBots && settings.telegramBots.length > 0 
+      ? settings.telegramBots 
+      : INITIAL_TELEGRAM_BOTS;
+    
+    const updated = currentBots.filter(b => b.id !== botId);
+    await updateStoreSettings({ telegramBots: updated });
+    addToast('টেলিগ্রাম বটটি মুছে ফেলা হয়েছে', 'info');
+  };
+
+  const toggleTelegramBot = async (botId: string, isEnabled: boolean) => {
+    const currentBots = settings.telegramBots && settings.telegramBots.length > 0 
+      ? settings.telegramBots 
+      : INITIAL_TELEGRAM_BOTS;
+    
+    const updated = currentBots.map(b => b.id === botId ? { ...b, isEnabled, isConnected: isEnabled } : b);
+    await updateStoreSettings({ telegramBots: updated });
+    addToast(isEnabled ? 'বটটি সফলভাবে সক্রিয় করা হয়েছে!' : 'বটটি নিষ্ক্রিয় করা হয়েছে', 'info');
+  };
+
+  const testTelegramBot = async (botId: string, customMessage?: string) => {
+    const currentBots = settings.telegramBots && settings.telegramBots.length > 0 
+      ? settings.telegramBots 
+      : INITIAL_TELEGRAM_BOTS;
+    
+    const targetBot = currentBots.find(b => b.id === botId);
+    if (!targetBot) {
+      return { success: false, error: 'বটটি খুঁজে পাওয়া যায়নি' };
+    }
+
+    if (customMessage) {
+      return sendTelegramMessage(customMessage, targetBot.botToken, targetBot.chatId);
+    }
+    return testTelegramConnection(targetBot.botToken, targetBot.chatId);
+  };
+
+  const dispatchOrderNotification = async (orderData: Order) => {
+    try {
+      const allBots = settings.telegramBots && settings.telegramBots.length > 0 
+        ? settings.telegramBots 
+        : INITIAL_TELEGRAM_BOTS;
+      
+      const enabledBots = allBots.filter(b => b.isEnabled !== false);
+      
+      if (enabledBots.length === 0) {
+        await notifyNewOrder(orderData, settings.telegramBotToken, settings.telegramChatId);
+        return;
+      }
+
+      // Round-Robin Dispatch: 1st Order -> Bot 1, 2nd Order -> Bot 2, 3rd Order -> Bot 1, 4th Order -> Bot 2
+      const lastIndex = settings.telegramLastBotIndex ?? -1;
+      const nextIndex = (lastIndex + 1) % enabledBots.length;
+      const selectedBot = enabledBots[nextIndex];
+
+      // Dispatch ONLY to the selected bot for this order
+      await notifyNewOrder(orderData, selectedBot.botToken, selectedBot.chatId);
+
+      // Update round-robin tracking index and bot statistics in Firestore settings
+      const updatedBots = allBots.map(b => {
+        if (b.id === selectedBot.id) {
+          return {
+            ...b,
+            totalDispatches: (b.totalDispatches || 0) + 1,
+            lastUsedAt: new Date().toISOString()
+          };
+        }
+        return b;
+      });
+
+      await updateStoreSettings({
+        telegramBots: updatedBots,
+        telegramLastBotIndex: nextIndex
+      });
+    } catch (err) {
+      console.warn('Telegram round-robin dispatch error:', err);
+    }
+  };
+
+  // Dynamic Payment Accounts Management
+  const savePaymentAccount = async (account: PaymentAccount) => {
+    const current = settings.paymentAccounts && settings.paymentAccounts.length > 0 
+      ? settings.paymentAccounts 
+      : INITIAL_PAYMENT_ACCOUNTS;
+    
+    const exists = current.some(a => a.id === account.id);
+    const updated = exists 
+      ? current.map(a => a.id === account.id ? account : a)
+      : [...current, account];
+    
+    await updateStoreSettings({ paymentAccounts: updated });
+    addToast('পেমেন্ট অ্যাকাউন্ট সফলভাবে সংরক্ষিত হয়েছে!', 'success');
+  };
+
+  const deletePaymentAccount = async (accountId: string) => {
+    const current = settings.paymentAccounts && settings.paymentAccounts.length > 0 
+      ? settings.paymentAccounts 
+      : INITIAL_PAYMENT_ACCOUNTS;
+    
+    const updated = current.filter(a => a.id !== accountId);
+    await updateStoreSettings({ paymentAccounts: updated });
+    addToast('পেমেন্ট অ্যাকাউন্ট মুছে ফেলা হয়েছে', 'info');
+  };
+
+  const togglePaymentAccount = async (accountId: string, isEnabled: boolean) => {
+    const current = settings.paymentAccounts && settings.paymentAccounts.length > 0 
+      ? settings.paymentAccounts 
+      : INITIAL_PAYMENT_ACCOUNTS;
+    
+    const updated = current.map(a => a.id === accountId ? { ...a, isEnabled } : a);
+    await updateStoreSettings({ paymentAccounts: updated });
+    addToast(isEnabled ? 'পেমেন্ট মেথড সক্রিয় করা হয়েছে' : 'পেমেন্ট মেথড বন্ধ করা হয়েছে', 'info');
+  };
+
+  const reorderPaymentAccounts = async (accountId: string, direction: 'up' | 'down') => {
+    const list = [...(settings.paymentAccounts || INITIAL_PAYMENT_ACCOUNTS)];
+    const index = list.findIndex(a => a.id === accountId);
+    if (index < 0) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+
+    const [moved] = list.splice(index, 1);
+    list.splice(targetIndex, 0, moved);
+    const reordered = list.map((item, idx) => ({ ...item, displayOrder: idx + 1 }));
+    await updateStoreSettings({ paymentAccounts: reordered });
+    addToast('পেমেন্ট অ্যাকাউন্টের ক্রম পরিবর্তন করা হয়েছে', 'success');
   };
 
   const sendTelegramTestNotification = async (token?: string, chatId?: string) => {
@@ -1488,7 +1688,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateStoreSettings,
         seedInitialDataToFirestore,
         addReview,
+        updateReviewStatus,
+        editReview,
+        deleteReview,
         sendTelegramTestNotification,
+        saveTelegramBot,
+        deleteTelegramBot,
+        toggleTelegramBot,
+        testTelegramBot,
+        dispatchOrderNotification,
+        savePaymentAccount,
+        deletePaymentAccount,
+        togglePaymentAccount,
+        reorderPaymentAccounts,
         setActiveLogo,
         saveLogo,
         deleteLogo,

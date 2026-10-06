@@ -18,7 +18,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'jihanstoreofficial009@gmail.com' ||
+        request.auth.token.email.lower() == 'jihanstoreofficial009@gmail.com' ||
+        request.auth.token.email.lower() == 'jihanstore009@gmail.com' ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -58,14 +59,16 @@ service cloud.firestore {
     // Reviews & Testimonials
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if (isSignedIn() && request.resource.data.userId == request.auth.uid) || 
+                      (!isSignedIn() && request.resource.data.rating >= 1 && request.resource.data.rating <= 5);
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
     // Orders
     match /orders/{orderId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if (isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin())) || !isSignedIn();
+      allow create: if (isSignedIn() && request.resource.data.userId == request.auth.uid) || 
+                      (!isSignedIn() && request.resource.data.totalAmount > 0);
       allow update: if isSignedIn() && (
         isAdmin() ||
         (resource.data.userId == request.auth.uid && request.resource.data.orderStatus == 'cancelled' && resource.data.orderStatus == 'pending')
@@ -98,7 +101,10 @@ service cloud.firestore {
     // Admin records
     match /admins/{adminUid} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || (isSignedIn() && (
+        request.auth.token.email.lower() == 'jihanstoreofficial009@gmail.com' ||
+        request.auth.token.email.lower() == 'jihanstore009@gmail.com'
+      ));
     }
   }
 }

@@ -9,8 +9,105 @@ import {
   ContactNumber, 
   EmailContact, 
   SocialLinkItem, 
-  Advertisement 
+  Advertisement,
+  TelegramBotConfig,
+  PaymentAccount
 } from '../types/store';
+
+export const INITIAL_TELEGRAM_BOTS: TelegramBotConfig[] = [
+  {
+    id: 'bot-1',
+    botName: 'Jihan Dispatcher #1 (Primary)',
+    botUsername: '@jihanstore_bot',
+    botToken: '8714872675:AAGsB9U_eCOIG5Os75KisW_ieJaEkKTdS6U',
+    chatId: '6607631932',
+    isEnabled: true,
+    isConnected: true,
+    totalDispatches: 0,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'bot-2',
+    botName: 'Jihan Dispatcher #2 (Backup / Secondary)',
+    botUsername: '@jihan_store_backup_bot',
+    botToken: '8714872675:AAGsB9U_eCOIG5Os75KisW_ieJaEkKTdS6U',
+    chatId: '6607631932',
+    isEnabled: true,
+    isConnected: true,
+    totalDispatches: 0,
+    createdAt: new Date().toISOString()
+  }
+];
+
+export const INITIAL_PAYMENT_ACCOUNTS: PaymentAccount[] = [
+  {
+    id: 'pay-bkash-1',
+    provider: 'bkash',
+    accountName: 'জিহান স্টোর (অফিশিয়াল বিকাশ পার্সোনাল)',
+    accountNumber: '01710238359',
+    accountType: 'Personal',
+    instructions: 'বিকাশ অ্যাপ অথবা *247# ডায়াল করে "Send Money" করুন 01710238359 নম্বরে। সফল হলে নিচের ঘরে TrxID এবং আপনার বিকাশ নম্বর দিন।',
+    isEnabled: true,
+    isPrimary: true,
+    displayOrder: 1
+  },
+  {
+    id: 'pay-nagad-1',
+    provider: 'nagad',
+    accountName: 'জিহান স্টোর (অফিশিয়াল নগদ পার্সোনাল)',
+    accountNumber: '01867841638',
+    accountType: 'Personal',
+    instructions: 'নগদ অ্যাপ অথবা *167# ডায়াল করে "Send Money" করুন 01867841638 নম্বরে। সফল হলে নিচের ঘরে TrxID এবং আপনার নগদ নম্বর দিন।',
+    isEnabled: true,
+    isPrimary: true,
+    displayOrder: 2
+  },
+  {
+    id: 'pay-rocket-1',
+    provider: 'rocket',
+    accountName: 'জিহান স্টোর রকেট অ্যাকাউন্ট',
+    accountNumber: '01867841638-9',
+    accountType: 'Personal',
+    instructions: 'রকেট পার্সোনাল নম্বরে সেন্ড মানি করুন। এরপর ট্রানজেকশন আইডি (TrxID) দিন।',
+    isEnabled: true,
+    isPrimary: true,
+    displayOrder: 3
+  },
+  {
+    id: 'pay-upay-1',
+    provider: 'upay',
+    accountName: 'জিহান স্টোর উপায় অ্যাকাউন্ট',
+    accountNumber: '01867841638',
+    accountType: 'Personal',
+    instructions: 'উপায় অ্যাকাউন্টে ক্যাশ ইন অথবা সেন্ড মানি করুন।',
+    isEnabled: true,
+    isPrimary: true,
+    displayOrder: 4
+  },
+  {
+    id: 'pay-bank-1',
+    provider: 'bank',
+    accountName: 'JIHAN STORE LTD',
+    accountNumber: 'Islami Bank Bangladesh Ltd - A/C 20501234567890 (Sandwip Branch)',
+    bankBranch: 'Sandwip Branch, Chittagong',
+    accountType: 'Current',
+    instructions: 'ব্যাংক ডিপোজিট বা ফান্ড ট্রান্সফার করে স্লিপ/TrxID প্রদান করুন।',
+    isEnabled: true,
+    isPrimary: true,
+    displayOrder: 5
+  },
+  {
+    id: 'pay-wallet-1',
+    provider: 'wallet',
+    accountName: 'জিহান ওয়ালেট ইন্সট্যান্ট পেমেন্ট',
+    accountNumber: 'Instant Wallet Deduction',
+    accountType: 'Personal',
+    instructions: 'আপনার জমানো ব্যালেন্স দিয়ে ১ সেকেন্ডে অর্ডার সম্পন্ন করুন।',
+    isEnabled: true,
+    isPrimary: true,
+    displayOrder: 6
+  }
+];
 
 export const INITIAL_LOGOS: LogoConfig[] = [
   {
@@ -107,6 +204,9 @@ export const INITIAL_SETTINGS: StoreSettings = {
   whatsapps: INITIAL_WHATSAPPS,
   emails: INITIAL_EMAILS,
   socialLinks: INITIAL_SOCIAL_LINKS,
+  paymentAccounts: INITIAL_PAYMENT_ACCOUNTS,
+  telegramBots: INITIAL_TELEGRAM_BOTS,
+  telegramLastBotIndex: -1,
   phone: '+880 1800-123456',
   whatsapp: '+8801800123456',
   email: 'jihanstoreofficial009@gmail.com',
@@ -383,6 +483,7 @@ export const INITIAL_REVIEWS: Review[] = [
     rating: 5,
     comment: 'অসাধারণ কোয়ালিটি! ঘড়ির ডিসপ্লে খুব স্মুথ এবং ব্যাটারি ব্যাকআপ দারুণ। ২ দিনের মধ্যে ডেলিভারি পেয়েছি। ধন্যবাদ জিহান স্টোর!',
     isVerifiedPurchase: true,
+    status: 'approved',
     createdAt: '2026-09-28T10:30:00Z'
   },
   {
@@ -393,6 +494,7 @@ export const INITIAL_REVIEWS: Review[] = [
     rating: 5,
     comment: 'সাউন্ড কোয়ালিটি অসম্ভব ভালো। নয়েজ ক্যানসেলেশন বেশ কাজের। জেনুইন প্রডাক্ট দেয়ার জন্য জিহান স্টোরের ওপর বিশ্বাস রাখা যায়।',
     isVerifiedPurchase: true,
+    status: 'approved',
     createdAt: '2026-09-29T14:15:00Z'
   },
   {
@@ -403,6 +505,7 @@ export const INITIAL_REVIEWS: Review[] = [
     rating: 5,
     comment: 'পাঞ্জাবির কাপড় অত্যন্ত মোলায়েম এবং রয়্যাল ব্লু কালার টা সামনাসামনি আরও আকর্ষণীয় দেখায়। সাইজ ফিটিং নিখুঁত!',
     isVerifiedPurchase: true,
+    status: 'approved',
     createdAt: '2026-09-30T18:40:00Z'
   }
 ];

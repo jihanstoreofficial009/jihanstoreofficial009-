@@ -236,22 +236,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenAuth }) => {
               </span>
             </div>
 
-            <div className="pt-4 border-t border-blue-900/50 flex flex-col gap-2">
-              <button
-                onClick={onOpenAdmin}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950 font-bold transition flex items-center justify-center gap-1.5 text-xs shadow-sm"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                <span>অ্যাডমিন কন্ট্রোল প্যানেল</span>
-              </button>
-
-              <button
-                onClick={toggleDemoAdminMode}
-                className="text-[10px] text-slate-500 hover:text-amber-400 text-center transition"
-              >
-                {isDemoAdminMode ? 'এডমিন ডেমো মোড সক্রিয় (বন্ধ করুন)' : 'এডমিন ডেমো মোড চালু করুন'}
-              </button>
-            </div>
+            {isAdmin && (
+              <div className="pt-4 border-t border-blue-900/50">
+                <button
+                  onClick={onOpenAdmin}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950 font-bold transition flex items-center justify-center gap-1.5 text-xs shadow-sm"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>অ্যাডমিন ড্যাশবোর্ড ওপেন করুন</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

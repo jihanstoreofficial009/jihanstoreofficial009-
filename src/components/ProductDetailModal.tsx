@@ -42,7 +42,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const activeImage = selectedImage || product.image;
   const allImages = product.images && product.images.length > 0 ? product.images : [product.image];
 
-  const productReviews = reviews.filter(r => r.productId === product.id);
+  const productReviews = reviews.filter(r => r.productId === product.id && r.status === 'approved');
 
   const handleAddToCart = () => {
     addToCart(product, quantity);

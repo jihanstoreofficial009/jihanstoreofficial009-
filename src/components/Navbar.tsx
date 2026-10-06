@@ -75,25 +75,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <a 
               href={`tel:${settings.phone}`} 
-              className="hidden lg:flex items-center gap-1.5 text-gray-300 hover:text-amber-400 transition text-xs"
+              className="flex items-center gap-1.5 text-gray-300 hover:text-amber-400 transition text-xs"
             >
               <Phone className="w-3 h-3 text-amber-400 shrink-0" />
               <span>{settings.phone}</span>
             </a>
-
-            {/* Demo Admin Quick Toggle */}
-            <button
-              onClick={toggleDemoAdminMode}
-              title="Toggle Admin features for testing and demo"
-              className={`text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-0.5 rounded-full font-medium transition flex items-center gap-1 border shrink-0 ${
-                isDemoAdminMode 
-                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-sm'
-                  : 'bg-blue-900/60 text-amber-300 border-amber-500/30 hover:bg-blue-800'
-              }`}
-            >
-              <ShieldCheck className="w-3 h-3 shrink-0" />
-              <span>{isDemoAdminMode ? 'অ্যাডমিন' : 'Admin'}</span>
-            </button>
           </div>
         </div>
       </div>

@@ -29,13 +29,16 @@ import {
   CheckCircle2,
   Crown,
   Upload,
-  FileImage
+  FileImage,
+  Star
 } from 'lucide-react';
 import { Product, Category, Order, OrderStatus, WalletTransaction, Coupon, StoreSettings } from '../types/store';
 import { uploadImageFile, deleteStorageFile } from '../lib/firebase';
 import { AdminLogosManager } from './admin/AdminLogosManager';
 import { AdminAdsManager } from './admin/AdminAdsManager';
 import { AdminContentManager } from './admin/AdminContentManager';
+import { AdminTelegramManager } from './admin/AdminTelegramManager';
+import { AdminReviewsManager } from './admin/AdminReviewsManager';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -67,11 +70,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     updateStoreSettings,
     seedInitialDataToFirestore,
     addToast,
-    sendTelegramTestNotification
+    sendTelegramTestNotification,
+    reviews
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'orders' | 'products' | 'categories' | 'logos' | 'ads' | 'wallet' | 'coupons' | 'settings' | 'export'
+    'overview' | 'orders' | 'products' | 'categories' | 'logos' | 'ads' | 'telegram' | 'reviews' | 'wallet' | 'coupons' | 'settings' | 'export'
   >('overview');
 
   const [isSendingTelegramTest, setIsSendingTelegramTest] = useState(false);
@@ -392,6 +396,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             >
               <Megaphone className="w-4 h-4" />
               <span>বিজ্ঞাপন সেল (Ad Manager)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('telegram')}
+              className={`w-full py-2.5 px-3 rounded-xl flex items-center justify-between transition text-left ${
+                activeTab === 'telegram'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-blue-900/40'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Bot className="w-4 h-4 text-sky-400" />
+                <span>টেলিগ্রাম ইন্টিগ্রেশন</span>
+              </div>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400">
+                Round-Robin
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`w-full py-2.5 px-3 rounded-xl flex items-center justify-between transition text-left ${
+                activeTab === 'reviews'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-blue-900/40'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Star className="w-4 h-4 text-amber-400" />
+                <span>রিভিউ ও রেটিং ({reviews.length})</span>
+              </div>
+              {reviews.filter(r => r.status === 'pending').length > 0 && (
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 text-[10px] flex items-center justify-center font-bold">
+                  {reviews.filter(r => r.status === 'pending').length}
+                </span>
+              )}
             </button>
 
             <button
@@ -959,6 +999,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <AdminAdsManager />
             )}
 
+            {/* TELEGRAM MULTI-BOT & ROUND-ROBIN ROUTING TAB */}
+            {activeTab === 'telegram' && (
+              <AdminTelegramManager />
+            )}
+
+            {/* CUSTOMER REVIEWS & RATINGS MANAGER TAB */}
+            {activeTab === 'reviews' && (
+              <AdminReviewsManager />
+            )}
+
             {/* DYNAMIC STORE SETTINGS & MULTI-CONTENT TAB */}
             {activeTab === 'settings' && (
               <AdminContentManager />
@@ -1085,13 +1135,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              {/* Product Image Upload with Firebase Storage */}
-              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
-                <span className="font-bold text-amber-400 block text-xs flex items-center gap-1.5">
-                  <FileImage className="w-4 h-4" />
-                  <span>পণ্যের ছবি আপলোড (Product Image):</span>
-                </span>
+              {/* Multi-Image Product Gallery Management */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-400 block text-xs flex items-center gap-1.5">
+                    <FileImage className="w-4 h-4" />
+                    <span>পণ্যের ছবি ও গ্যালারি (Multiple Product Images):</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {((editingProduct.images && editingProduct.images.length > 0) ? editingProduct.images.length : (editingProduct.image ? 1 : 0))}টি ছবি যুক্ত
+                  </span>
+                </div>
 
+                {/* Upload from device */}
                 <div className="flex flex-col sm:flex-row items-center gap-2.5">
                   <label className={`w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-xs ${
                     isUploadingProductImage ? 'opacity-60 cursor-not-allowed' : ''
@@ -1104,7 +1160,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     ) : (
                       <>
                         <Upload className="w-3.5 h-3.5" />
-                        <span>ডিভাইস থেকে ছবি আপলোড</span>
+                        <span>ডিভাইস থেকে নতুন ছবি যোগ করুন</span>
                       </>
                     )}
                     <input
@@ -1118,23 +1174,85 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <span className="text-[10px] text-slate-400">JPG, PNG, WebP (Max 5MB)</span>
                 </div>
 
+                {/* URL Input */}
                 <div>
                   <label className="font-bold block mb-1 text-[11px]">অথবা ছবির সরাসরি URL লিংক দিন:</label>
-                  <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/..."
-                    value={editingProduct.image || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-blue-950/80 border border-slate-200 dark:border-blue-800 text-xs font-mono"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/..."
+                      value={editingProduct.image || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditingProduct(prev => prev ? {
+                          ...prev,
+                          image: val,
+                          images: prev.images?.includes(val) ? prev.images : (val ? [...(prev.images || []), val] : prev.images)
+                        } : null);
+                      }}
+                      className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-blue-950/80 border border-slate-200 dark:border-blue-800 text-xs font-mono"
+                    />
+                  </div>
                 </div>
 
-                {editingProduct.image && (
-                  <div className="p-2 rounded-xl bg-slate-900/60 border border-amber-500/20 flex items-center gap-3">
-                    <img src={editingProduct.image} alt="Preview" className="w-12 h-12 rounded-lg object-cover bg-white/10" />
-                    <div>
-                      <span className="text-emerald-400 font-bold block text-[11px]">ছবি সংযুক্ত হয়েছে!</span>
-                      <span className="text-slate-400 text-[10px] truncate max-w-[200px] block font-mono">{editingProduct.image}</span>
+                {/* Gallery List Preview */}
+                {editingProduct.images && editingProduct.images.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-amber-500/20">
+                    <span className="text-[11px] font-bold text-slate-300 block">
+                      সংযুক্ত ছবি সমূহ (যেকোনো ছবিতে ক্লিক করে প্রধান ছবি নির্বাচন করুন):
+                    </span>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {editingProduct.images.map((imgUrl, idx) => {
+                        const isPrimary = editingProduct.image === imgUrl || (!editingProduct.image && idx === 0);
+                        return (
+                          <div 
+                            key={idx}
+                            className={`group relative rounded-xl overflow-hidden border-2 transition-all p-1 bg-slate-900/60 ${
+                              isPrimary ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-slate-700/60 hover:border-slate-500'
+                            }`}
+                          >
+                            <img 
+                              src={imgUrl} 
+                              alt={`Product image ${idx + 1}`} 
+                              className="w-full h-16 object-cover rounded-lg" 
+                            />
+                            {isPrimary && (
+                              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-black text-[9px] shadow-sm">
+                                প্রধান ছবি
+                              </span>
+                            )}
+                            <div className="absolute inset-0 bg-slate-950/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1 rounded-lg">
+                              {!isPrimary && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingProduct({ ...editingProduct, image: imgUrl })}
+                                  className="p-1 rounded bg-amber-500 text-slate-950 text-[10px] font-bold"
+                                  title="প্রধান ছবি করুন"
+                                >
+                                  প্রধান
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedList = (editingProduct.images || []).filter((_, i) => i !== idx);
+                                  const newPrimary = isPrimary ? (updatedList[0] || '') : (editingProduct.image || '');
+                                  setEditingProduct({
+                                    ...editingProduct,
+                                    images: updatedList,
+                                    image: newPrimary
+                                  });
+                                  deleteStorageFile(imgUrl).catch(() => {});
+                                }}
+                                className="p-1 rounded bg-rose-600 text-white"
+                                title="মুছে ফেলুন"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

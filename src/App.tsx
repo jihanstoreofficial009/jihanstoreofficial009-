@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { Navbar } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
@@ -77,6 +77,15 @@ const MainStoreContent: React.FC = () => {
       window.removeEventListener('hashchange', checkRoute);
     };
   }, []);
+
+  // Authorized Gmail login auto-routes straight into secure Admin Panel
+  const prevAdminRef = useRef(false);
+  useEffect(() => {
+    if (isAdmin && !prevAdminRef.current) {
+      setIsAdminOpen(true);
+    }
+    prevAdminRef.current = isAdmin;
+  }, [isAdmin]);
 
   // Filter and Sort Products
   const filteredProducts = useMemo(() => {

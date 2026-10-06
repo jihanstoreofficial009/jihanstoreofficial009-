@@ -39,7 +39,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     selectedDeliveryArea,
     setSelectedDeliveryArea,
     placeOrder,
-    settings
+    settings,
+    addToast
   } = useStore();
 
   const [customerName, setCustomerName] = useState(userProfile?.displayName || user?.displayName || '');
@@ -410,17 +411,52 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </label>
                 </div>
 
-                {/* Manual bKash / Nagad inputs */}
+                {/* Manual Mobile Banking / Bank inputs */}
                 {paymentMethod === 'bkash' && (
                   <div className="p-4 rounded-2xl bg-amber-50 dark:bg-blue-950/60 border border-amber-300 dark:border-blue-800 space-y-3 text-xs">
-                    <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-                      দয়া করে বিকাশ বা নগদ পার্সোনাল নাম্বারে <strong>Send Money</strong> করুন:
-                      <br />
-                      <strong className="text-amber-600 dark:text-amber-400 font-mono text-sm block mt-1">
-                        {settings.bkashNumber}
-                      </strong>
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <p className="text-slate-700 dark:text-slate-200 font-bold">
+                        নিচের যেকোনো নম্বরে বা অ্যাকাউন্টে <strong>Send Money / ডিপোজিট</strong> করুন:
+                      </p>
+                      
+                      {/* Active Accounts list */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {((settings.paymentAccounts && settings.paymentAccounts.length > 0) 
+                          ? settings.paymentAccounts.filter(a => a.isEnabled && a.provider !== 'wallet')
+                          : [
+                              { id: '1', provider: 'bkash', accountName: 'বিকাশ পার্সোনাল', accountNumber: settings.bkashNumber, accountType: 'Personal', instructions: 'Send Money' },
+                              { id: '2', provider: 'nagad', accountName: 'নগদ পার্সোনাল', accountNumber: settings.nagadNumber, accountType: 'Personal', instructions: 'Send Money' }
+                            ]
+                        ).map((acc) => (
+                          <div key={acc.id} className="p-2.5 rounded-xl bg-white dark:bg-blue-900/40 border border-slate-200 dark:border-blue-800 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-amber-500 uppercase text-[10px]">{acc.provider} ({acc.accountType})</span>
+                              <span className="text-[10px] text-slate-400">{acc.accountName}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-1">
+                              <strong className="text-slate-900 dark:text-white font-mono text-xs select-all">
+                                {acc.accountNumber}
+                              </strong>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(acc.accountNumber);
+                                  addToast(`${acc.accountNumber} কপি করা হয়েছে!`, 'success');
+                                }}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-slate-950 font-bold transition"
+                              >
+                                কপি
+                              </button>
+                            </div>
+                            {acc.instructions && (
+                              <p className="text-[10px] text-slate-400 italic">{acc.instructions}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-amber-300/40 dark:border-blue-800">
                       <div>
                         <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                           যে নম্বর থেকে পাঠিয়েছেন

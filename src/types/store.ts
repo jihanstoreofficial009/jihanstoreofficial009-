@@ -33,7 +33,7 @@ export interface CartItem {
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-export type PaymentMethod = 'cod' | 'wallet' | 'bkash' | 'nagad';
+export type PaymentMethod = 'cod' | 'wallet' | 'bkash' | 'nagad' | 'rocket' | 'upay' | 'bank';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 
 export interface Order {
@@ -105,6 +105,37 @@ export interface Coupon {
   expiryDate?: string;
 }
 
+export interface PaymentAccount {
+  id: string;
+  provider: 'bkash' | 'nagad' | 'rocket' | 'upay' | 'bank' | 'wallet';
+  accountName: string;
+  accountNumber: string;
+  accountType: 'Personal' | 'Merchant' | 'Agent' | 'Savings' | 'Current';
+  instructions?: string;
+  qrCodeUrl?: string;
+  icon?: string;
+  isPrimary?: boolean;
+  isEnabled: boolean;
+  displayOrder: number;
+  bankBranch?: string;
+  routingNumber?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TelegramBotConfig {
+  id: string;
+  botName: string;
+  botUsername?: string;
+  botToken: string;
+  chatId: string;
+  isEnabled: boolean;
+  isConnected?: boolean;
+  lastUsedAt?: string;
+  totalDispatches?: number;
+  createdAt?: string;
+}
+
 export interface LogoConfig {
   id: string;
   name: string;
@@ -114,6 +145,8 @@ export interface LogoConfig {
   tagline?: string;
   taglineBn?: string;
   isActive: boolean;
+  isEnabled?: boolean;
+  displayOrder?: number;
 }
 
 export interface AddressItem {
@@ -124,6 +157,7 @@ export interface AddressItem {
   phone?: string;
   isDefault: boolean;
   isEnabled: boolean;
+  displayOrder?: number;
 }
 
 export interface ContactNumber {
@@ -133,6 +167,7 @@ export interface ContactNumber {
   type: 'phone' | 'whatsapp' | 'support' | 'billing';
   isDefault: boolean;
   isEnabled: boolean;
+  displayOrder?: number;
 }
 
 export interface EmailContact {
@@ -141,6 +176,7 @@ export interface EmailContact {
   email: string;
   isDefault: boolean;
   isEnabled: boolean;
+  displayOrder?: number;
 }
 
 export interface SocialLinkItem {
@@ -187,6 +223,9 @@ export interface StoreSettings {
   emails: EmailContact[];
   whatsapps: ContactNumber[];
   socialLinks: SocialLinkItem[];
+  paymentAccounts?: PaymentAccount[];
+  telegramBots?: TelegramBotConfig[];
+  telegramLastBotIndex?: number;
   phone: string;
   whatsapp: string;
   email: string;
@@ -207,11 +246,15 @@ export interface StoreSettings {
 export interface Review {
   id: string;
   productId?: string;
+  productTitle?: string;
   userId: string;
   userName: string;
   userAvatar?: string;
+  photoUrl?: string;
   rating: number;
   comment: string;
+  status: 'pending' | 'approved' | 'hidden';
   isVerifiedPurchase: boolean;
   createdAt: string;
+  updatedAt?: string;
 }

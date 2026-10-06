@@ -9,13 +9,28 @@ import {
   Check, 
   HelpCircle, 
   ChevronDown,
-  Sparkles
+  Sparkles,
+  Plus,
+  X,
+  Send,
+  User,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export const ReviewsAndOffersSection: React.FC = () => {
-  const { reviews, coupons, applyCoupon, addToast } = useStore();
+  const { reviews, coupons, applyCoupon, addToast, addReview, user, userProfile } = useStore();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+
+  // Review submission state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewName, setReviewName] = useState(userProfile?.displayName || user?.displayName || '');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewPhoto, setReviewPhoto] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const approvedReviews = reviews.filter(r => r.status === 'approved');
 
   const handleCopyCoupon = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -95,20 +110,35 @@ export const ReviewsAndOffersSection: React.FC = () => {
 
       {/* Customer Reviews Section */}
       <div className="space-y-6">
-        <div className="text-center max-w-xl mx-auto space-y-1.5">
-          <span className="text-xs font-bold text-amber-500 uppercase tracking-widest block">
-            গ্রাহক পর্যালোচনা
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-            আমাদের সন্তুষ্ট গ্রাহকদের মতামত
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            জিহান স্টোরের সততা, গুণমান ও দ্রুত সেবার বাস্তব অভিজ্ঞতা
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 max-w-5xl mx-auto">
+          <div className="space-y-1 text-center sm:text-left">
+            <span className="text-xs font-bold text-amber-500 uppercase tracking-widest block">
+              গ্রাহক পর্যালোচনা
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+              আমাদের সন্তুষ্ট গ্রাহকদের মতামত
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              জিহান স্টোরের সততা, গুণমান ও দ্রুত সেবার বাস্তব অভিজ্ঞতা
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              if (userProfile?.displayName || user?.displayName) {
+                setReviewName(userProfile?.displayName || user?.displayName || '');
+              }
+              setShowReviewModal(true);
+            }}
+            className="self-center sm:self-end px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-md shadow-amber-500/10 transition shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>মতামত বা রিভিউ দিন</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-          {reviews.slice(0, 3).map((rev) => (
+          {approvedReviews.slice(0, 3).map((rev) => (
             <div
               key={rev.id}
               className="p-5 rounded-3xl bg-white dark:bg-[#0B1E3F]/80 border border-slate-200 dark:border-blue-900/60 shadow-sm flex flex-col justify-between space-y-4 hover:border-amber-400/50 transition"
@@ -119,7 +149,7 @@ export const ReviewsAndOffersSection: React.FC = () => {
                     {[1, 2, 3, 4, 5].map((s) => (
                       <Star
                         key={s}
-                        className={`w-4 h-4 ${s <= rev.rating ? 'fill-amber-400' : 'text-slate-300'}`}
+                        className={`w-4 h-4 ${s <= rev.rating ? 'fill-amber-400' : 'text-slate-300 dark:text-slate-700'}`}
                       />
                     ))}
                   </div>
@@ -137,9 +167,17 @@ export const ReviewsAndOffersSection: React.FC = () => {
               </div>
 
               <div className="pt-3 border-t border-slate-100 dark:border-blue-900/50 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 to-amber-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs">
-                  {rev.userName.charAt(0)}
-                </div>
+                {rev.photoUrl ? (
+                  <img 
+                    src={rev.photoUrl} 
+                    alt={rev.userName} 
+                    className="w-8 h-8 rounded-full object-cover border border-amber-400/30 shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 to-amber-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs shrink-0">
+                    {rev.userName.charAt(0)}
+                  </div>
+                )}
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white">
                     {rev.userName}
@@ -153,6 +191,138 @@ export const ReviewsAndOffersSection: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Customer Review Submission Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 animate-fadeIn">
+          <div className="w-full max-w-md bg-white dark:bg-[#0B1E3F] rounded-3xl p-6 border border-slate-200 dark:border-blue-900 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span>আপনার মূল্যবান মতামত বা রিভিউ দিন</span>
+              </h3>
+              <button 
+                onClick={() => setShowReviewModal(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-blue-950 text-slate-400 hover:text-white flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!reviewName.trim() || !reviewComment.trim()) {
+                  addToast('আপনার নাম এবং মন্তব্য লিখুন', 'error');
+                  return;
+                }
+                setIsSubmitting(true);
+                try {
+                  await addReview({
+                    userName: reviewName.trim(),
+                    photoUrl: reviewPhoto.trim() || undefined,
+                    rating: reviewRating,
+                    comment: reviewComment.trim()
+                  });
+                  setShowReviewModal(false);
+                  setReviewComment('');
+                  setReviewPhoto('');
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              className="space-y-3.5"
+            >
+              <div>
+                <label className="font-bold block mb-1 text-slate-700 dark:text-slate-300">
+                  আপনার পূর্ণ নাম *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="যেমন: তানভীর আহমেদ"
+                  value={reviewName}
+                  onChange={(e) => setReviewName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold block mb-1 text-slate-700 dark:text-slate-300">
+                  রেটিং নির্বাচন করুন *
+                </label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setReviewRating(num)}
+                      className={`p-2 rounded-xl border transition ${
+                        reviewRating >= num
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                          : 'bg-slate-100 dark:bg-blue-950 border-slate-200 dark:border-blue-900 text-slate-400'
+                      }`}
+                    >
+                      <Star className={`w-4 h-4 ${reviewRating >= num ? 'fill-slate-950' : ''}`} />
+                    </button>
+                  ))}
+                  <span className="font-bold text-amber-400 ml-2">{reviewRating} Star</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold block mb-1 text-slate-700 dark:text-slate-300">
+                  আপনার ছবি বা প্রোফাইল অবতার URL (ঐচ্ছিক)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={reviewPhoto}
+                  onChange={(e) => setReviewPhoto(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold block mb-1 text-slate-700 dark:text-slate-300">
+                  আপনার বাস্তব অভিজ্ঞতা বা মতামত *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="পণ্য ও সার্ভিসের কোয়ালিটি কেমন লাগলো লিখুন..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-blue-950/60 border border-slate-200 dark:border-blue-800 text-xs"
+                ></textarea>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-400 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>রিভিউ জমা দিলে অ্যাডমিন যাচাইয়ের পর তা সরাসরি ওয়েবসাইটে প্রকাশিত হবে।</span>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 dark:border-blue-900 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-blue-950 text-slate-700 dark:text-slate-300 font-bold text-xs"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center gap-2"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmitting ? 'জমা হচ্ছে...' : 'রিভিউ জমা দিন'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* FAQ Section */}
       <div className="space-y-4 max-w-3xl mx-auto">

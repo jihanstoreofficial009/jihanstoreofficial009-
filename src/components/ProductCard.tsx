@@ -137,7 +137,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
               className="w-full py-1.5 sm:py-2 px-1 sm:px-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[11px] sm:text-xs font-bold shadow-sm hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 transition flex items-center justify-center gap-1"
             >
               <Zap className="w-3 sm:w-3.5 h-3 sm:h-3.5 fill-slate-950 shrink-0" />
-              <span>কিনুন</span>
+              <span>অর্ডার নাও</span>
             </button>
           </div>
         </div>
